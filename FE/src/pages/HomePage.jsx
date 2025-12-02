@@ -79,9 +79,7 @@ const HomePage = () => {
 
   return (
     <div className="app-container">
-      <div className="header-bar">
-        <HeaderBar />
-      </div>
+      <HeaderBar />
       {/* Render cho Desktop */}
       <main ref={mainContainerRef} className="main-content" style={{ userSelect: isDragging ? 'none' : 'auto' }}>
         <div 

@@ -1,28 +1,40 @@
-import React from "react";
-import { useState } from "react";
-import { Router } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+// import { clearAuthError } from "@/redux/Auth/AuthSlice";
+import { loginUser } from "../../redux/Auth/AuthThunk";
+import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const Login = () => {
+const LoginForm = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+
+    // const { isLoading, isAuthenticated } = useSelector((state) => state.auth);
+
+    // useEffect(() => {
+    //     if (isAuthenticated) {
+    //         navigate("/"); 
+    //     }
+    //     dispatch(clearAuthError());
+    // }, [isAuthenticated, navigate, dispatch]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setIsLoading(true);
-        try {
-            // Giả sử có hàm authenticateUser để xác thực người dùng
-            await authenticateUser(email, password);
-            // Chuyển hướng sau khi đăng nhập thành công
-            // Router.push("/dashboard");
-        } catch (error) {
-            console.error("Đăng nhập thất bại:", error);
-        } finally {
-            setIsLoading(false);
+        if(!email || !password) {
+            toast.warn("Vui lòng điền đầy đủ thông tin");
+            return;
+        }
+        const res = await dispatch(loginUser({ email, password }));
+        if(loginUser.fulfilled.match(res)){
+            toast.success("Đăng nhập thành công. Chào mừng bạn quay trở lại!");
+            navigate("/")
         }
     }
 
@@ -55,11 +67,13 @@ const Login = () => {
                         required
                         />
                     </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+                    <Button type="submit" className="w-full hover:shadow-gray-400">
+                        Đăng nhập
                     </Button>
                 </form>
             </CardContent>
         </Card>
     )
 }
+
+export default LoginForm;

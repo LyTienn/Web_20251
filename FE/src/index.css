@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 /* Reset và styles cơ bản */
 body {
   margin: 0;
@@ -6,8 +8,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #242424;
-  color: rgba(255, 255, 255, 0.87);
+  background-color: #fff;
+  color: rgba(0, 0, 0, 0.87);
 }
 
 /* Container chính của App */
@@ -20,10 +22,9 @@ body {
 
 /* Header */
 .header-bar {
-  flex-shrink: 0;
-  padding: 0.5rem 1rem;
-  background-color: #1a1a1a;
-  border-bottom: 1px solid #333;
+  /* padding: 0.5rem 2rem;
+  background-color: #fff;
+  border-bottom: 1px solid #ccc; */
 }
 
 /* Vùng nội dung chính chứa 2 section */
@@ -61,8 +62,8 @@ body {
 
 /* Thanh phân chia kéo-thả */
 .divider {
-  width: 8px;
-  background-color: #333;
+  width: 6px;
+  background-color: #ccd;
   flex-shrink: 0;
   cursor: pointer;
   cursor: col-resize; /* Con trỏ chuột thay đổi khi di vào */

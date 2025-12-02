@@ -1,5 +1,7 @@
-import { Suspense, lazy, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -15,18 +17,6 @@ const MainLayout = () => {
           <Route path="*" element={<HomePage />} />
           <Route path="/book/:id/read" element={<Read />} />
         </Routes>
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="colored"
-        />
       </Suspense>
     </div>
   )
@@ -35,7 +25,8 @@ const MainLayout = () => {
 function AppContent() {
   return (
     <Routes>
-      {/* <Route path='/' element={<Login />} /> */}
+      <Route path='/register' element={<Register />} />
+      <Route path='/login' element={<Login />} />
       <Route path='/*' element={<MainLayout />} />
     </Routes>
   )
@@ -43,9 +34,21 @@ function AppContent() {
 
 function App() {
  return (
-  <Router>
-    <AppContent />
-  </Router>
+    <>
+      <AppContent />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
+    </>
  ) 
 }
 export default App;
