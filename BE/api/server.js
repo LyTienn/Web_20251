@@ -5,6 +5,9 @@ import cookieParser from "cookie-parser";
 import sequelize from "./config/db-config.js";
 import authRoutes from "./routes/auth-route.js";
 import userRoutes from "./routes/user-route.js";
+import bookRoutes from "./routes/book-route.js";
+import subjectRoutes from "./routes/subject-route.js";
+import authorRoutes from "./routes/author-route.js";
 
 dotenv.config();
 
@@ -25,6 +28,9 @@ app.use(cookieParser());
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/books", bookRoutes);
+app.use("/api/subjects", subjectRoutes);
+app.use("/api/authors", authorRoutes);
 
 app.get("/api/health", async (req, res) => {
   try {
