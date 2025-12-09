@@ -2,9 +2,8 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
-export default function BookCard({ book, genre }) {
+export default function BookCard({ book, subject }) {
     return (
-    <Link to={`/book/${book.id}`}>
         <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden group">
             <div className='relative aspect-2/3 overflow-hidden bg-muted'>
                 <img
@@ -23,15 +22,15 @@ export default function BookCard({ book, genre }) {
                     {book.title}
                 </h3>
                 <p className="text-sm text-muted-foreground mb-2">{book.author}</p>
-                {genre && (
+                {subject && (
                     <Badge variant="secondary" className="text-xs">
-                    {genre.name}
+                    {subject.name}
                     </Badge>
                 )}
             </CardContent>
-            <CardFooter className="p-4 pt-0 flex justify-between items-center">
+            {/* <CardFooter className="p-4 pt-0 flex justify-between items-center">
                 <p className="text-xs text-muted-foreground">{book.totalPages} trang</p>
-            </CardFooter>
+            </CardFooter> */}
         </Card>
-    </Link>
+    
 )}

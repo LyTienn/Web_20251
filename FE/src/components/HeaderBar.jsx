@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '@/redux/Auth/AuthThunk';
+import Search from './Search';
 import { Button } from "@/components/ui/button";
-import { BookOpen, User, LogOut, Library, LayoutDashboard, Search, Zap, Settings } from "lucide-react"
+import { BookOpen, User, LogOut, Library, LayoutDashboard, Zap, Settings } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,18 +14,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const HeaderBar = () => {
+const HeaderBar = ({ searchData, onSearchResult }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
+  
+  // Lấy state auth
   const { user, isAuthenticated } = useSelector((state) => state.auth);
 
   const handleLogout = () => {
     dispatch(logoutUser());
-    navigate('/');
+    navigate('/homepage'); 
   };
 
-  // Hiệu ứng đổi màu nền khi cuộn trang
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -33,7 +35,7 @@ const HeaderBar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Helper để lấy text hiển thị gói (Mock logic dựa trên role)
+  // gói dịch vụ (Sửa thêm các gói nếu có trong tương lai)
   const getSubscriptionText = () => {
     if (!user) return "";
     if (user.role === "admin") return "Quản trị viên";
@@ -44,17 +46,20 @@ const HeaderBar = () => {
 
   return (
     <header
-      className={`border-b sticky top-0 z-10 transition-all duration-300 ${
-        isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-white"
+      className={`border-b sticky top-0 z-50 transition-all duration-300 ${
+        isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
       }`}
     >
-      <div className='mx-auto px-4 h-16 flex items-center justify-between'>
+      <div className='container mx-auto px-4 h-16 flex items-center justify-between'>
         <Link to="/" className='flex items-center gap-2 font-semibold text-lg'>
           <BookOpen className='h-6 w-6' />
           <span>Thư Viện Sách</span>
         </Link>
+        
         <nav className="flex items-center gap-4">
-          <Search />
+
+          <Search data={searchData} onResult={onSearchResult}/>
+          
           { isAuthenticated ? (
             <>
               { user?.role !== "admin" && (
@@ -80,26 +85,23 @@ const HeaderBar = () => {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="relative h-8 pl-2 pr-4 hover:bg-gray-200">
-                    <User className="h-5 w-5 mr-2" />
+                  <Button variant="ghost" size="sm" className="h-8 pl-2 pr-2 hover:bg-gray-200">
+                    <User className="h-4 w-4 mr-2" />
                     <span className="font-medium">{user?.fullName || "User"}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 
-                <DropdownMenuContent align="end" className="w-56 mt-4">
+                <DropdownMenuContent align="end" className="w-56 mt-2">
                   <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   
-                  {/* Thông tin gói (chỉ hiển thị, không click được) */}
-                  <DropdownMenuItem disabled className="opacity-100">
-                    <span className="text-sm text-slate-500">
-                      Gói hiện tại: <span className="font-medium text-slate-700">Sửa ở đây</span>
+                  <DropdownMenuItem disabled>
+                    <span className="text-sm text-muted-foreground">
+                      Gói hiện tại: <span className="font-medium text-slate-700">{getSubscriptionText()}</span>
                     </span>
                   </DropdownMenuItem>
-                  
                   <DropdownMenuSeparator />
                   
-                  {/* Menu cho User thường */}
                   {user?.role !== "admin" && (
                     <DropdownMenuItem onClick={() => navigate("/bookshelf")} className="cursor-pointer hover:bg-gray-200">
                       <Library className="h-4 w-4 mr-2" />
@@ -114,8 +116,7 @@ const HeaderBar = () => {
                   
                   <DropdownMenuSeparator />
                   
-                  {/* Các lựa chọn nâng cấp (nếu là user thường) */}
-                  {user?.role === "USER" && (
+                  {user?.role !== "member" && (
                     <>
                       <DropdownMenuItem onClick={() => navigate("/membership")} className="cursor-pointer hover:bg-gray-200">
                         Trở thành hội viên
@@ -134,7 +135,7 @@ const HeaderBar = () => {
           ) : (
             <>
               <Link to="/login">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="hover:bg-slate-200">
                   Đăng nhập
                 </Button>
               </Link>

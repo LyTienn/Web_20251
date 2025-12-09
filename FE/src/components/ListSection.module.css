@@ -1,8 +1,8 @@
-.sectionContainer {
+/* .sectionContainer {
   container-type: inline-size;
   container-name: list-section;
-  height: 100%; /* Chiếm toàn bộ chiều cao của phần tử cha */
-  overflow-y: auto; /* Cho phép cuộn dọc khi nội dung tràn */
+  height: 100%; 
+  overflow-y: auto; 
 }
 
 .sliderCard {
@@ -22,33 +22,28 @@
 }
 
 .sliderContainer {
-  overflow-x: auto;
-  padding-bottom: 20px; /* Tạo khoảng trống cho bóng đổ và thanh cuộn */
-  /* Ẩn thanh cuộn cho trình duyệt Webkit (Chrome, Safari) */
+  padding-bottom: 20px; 
   scroll-behavior: smooth;
 
   &::-webkit-scrollbar {
     display: none;
   }
-  /* Ẩn thanh cuộn cho Firefox */
   scrollbar-width: none;
-  /* Ẩn thanh cuộn cho IE/Edge */
   -ms-overflow-style: none;
 }
 
 .sliderTrack {
   display: flex;
   gap: 20px;
-  padding: 0 2rem; /* Thêm padding ngang cho slider */
+  padding: 0 2rem;
 }
 
 .cardContainer{
   position: relative;
-  /* Kích thước thẻ sách co giãn theo container */
   width: clamp(160px, 28cqi, 220px);
   height: clamp(240px, 42cqi, 300px);
   cursor: pointer;
-  flex-shrink: 0; /* Ngăn các thẻ bị co lại trong flex container */
+  flex-shrink: 0; 
 }
 
 .summaryCard, .detailCard {
@@ -62,12 +57,12 @@
   text-align: center;
   background-color: white;
   transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
-  box-sizing: border-box; /* Đảm bảo padding không làm tăng kích thước */
+  box-sizing: border-box; 
 }
 
 .bookImage {
   width: 50%;
-  aspect-ratio: 2 / 3; /* Giữ tỉ lệ ảnh 2:3 */
+  aspect-ratio: 2 / 3; 
   object-fit: cover;
   margin-bottom: 12px;
 }
@@ -75,7 +70,7 @@
 .bookTitle {
   font-size: clamp(0.9rem, 1.8cqmin, 1.3rem);
   margin: 0 0 8px 0;
-  min-height: 2.4em; /* Đảm bảo đủ chỗ cho 2 dòng tiêu đề */
+  min-height: 2.4em;
 }
 
 .bookAuthor {
@@ -88,50 +83,44 @@
   font-size: clamp(0.6rem, 1.6cqmin, 0.95rem);
 }
 
-/* --- Thẻ chi tiết (ẩn mặc định) --- */
 .detailCard {
- 
   display: flex;
   align-items: center;
   padding: 20px;
   text-align: left;
-
   opacity: 0;
   pointer-events: none; 
   transform: scale(0.95);
   box-shadow: 0 8px 25px rgba(0,0,0,0.2);
   z-index: 10;
 }
-/* Điều chỉnh lại ảnh và tiêu đề cho thẻ tóm tắt */
+
 .summaryCard {
   padding: 16px;
 }
 
-/* Phần nội dung text trong thẻ chi tiết */
 .detailCard .detailContent {
   flex: 1;
 }
 
 .isActive {
-  /* Marker class, no styles needed here */
+ 
 }
 
-/* --- Hiệu ứng khi hover vào container --- */
 .cardContainer:hover .detailCard,
 .cardContainer.isActive .detailCard {
-  /* Mở rộng thẻ chi tiết một cách linh hoạt */
   width: clamp(220px, 45cqi, 360px);
   opacity: 1;
-  pointer-events: auto; /* Cho phép bắt sự kiện chuột khi hiện ra */
+  pointer-events: auto; 
   transform: scale(1);
 }
 .cardContainer:hover .summaryCard,
 .cardContainer.isActive .summaryCard {
   opacity: 0;
   transform: scale(0.95);
-}
+} */
 
-.navButton {
+/* .navButton {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -150,9 +139,9 @@
   color: #333;
   box-shadow: 0 2px 5px rgba(0,0,0,0.15);
   transition: all 0.2s ease-in-out;
-}
+} */
 
-.navButton:hover {
+/* .navButton:hover {
   background-color: white;
   transform: translateY(-50%) scale(1.1);
 }
@@ -163,4 +152,4 @@
 
 .right {
   right: 10px;
-}
+} */
