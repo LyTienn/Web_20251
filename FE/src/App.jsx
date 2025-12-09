@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const Read = lazy(() => import('./pages/Read'));
+const BookSection = lazy(() => import('./components/BookSection'));
 
 const MainLayout = () => {
   return (
@@ -16,6 +17,7 @@ const MainLayout = () => {
           <Route path="/homepage/*" element={<HomePage />} />       
           <Route path="*" element={<HomePage />} />
           <Route path="/book/:id/read" element={<Read />} />
+          <Route path="/book/:id" element={<BookSection />} />
         </Routes>
       </Suspense>
     </div>

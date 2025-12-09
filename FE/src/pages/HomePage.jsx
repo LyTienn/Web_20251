@@ -1,121 +1,87 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import '../App.css';
-import ListSection from '../components/ListSection'
-import BookSection from '../components/BookSection';
+import { useState, useEffect } from 'react';
+import ListSection from '../components/ListSection';
 import HeaderBar from '../components/HeaderBar';
-import { useWindowSize } from '../useWindowSize';
+import axios from '@/config/Axios-config';
+import { useNavigate } from 'react-router-dom';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay } from 'swiper/modules';
+import 'swiper/css';
 
 const HomePage = () => {
-  const [selectedBook, setSelectedBook] = useState(null);
+  const [allBooks, setAllBooks] = useState([]);
+  const [filteredBooks, setFilteredBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-// Breakpoints
-  const { width } = useWindowSize();
-  const isSmallScreen = width < 1024;
-
-  // State cho mobile view
-  const [activePanel, setActivePanel] = useState('list');
-
-  // State cho desktop view
-  const MIN_WIDTH = 30;
-  const MAX_WIDTH = 70;
-  const [listWidth, setListWidth] = useState(50);
-  const [isDragging, setIsDragging] = useState(false);
-  const mainContainerRef = useRef(null);
-
-  const handleMouseDown = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
+  useEffect(() => {
+    const fetchBooks = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('/books');
+        if (response.success && response.data) {
+          const normalizedData = response.data.map(book => ({
+            ...book,
+            imageUrl: book.imageUrl || book.image_url || 'https://placehold.co/150x220?text=No+Image',
+            author: typeof book.author === 'object' ? book.author?.name : book.author
+          }));
+          setAllBooks(normalizedData);
+          setFilteredBooks(normalizedData);
+        }
+      } catch (error) {
+        console.error("Failed to fetch books:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBooks();
   }, []);
 
-  const handleMouseMove = useCallback((e) => {
-    if (!isDragging || !mainContainerRef.current) return;
+  const handleSearchResult = (results) => {
+    setFilteredBooks(results || allBooks);
+  };
 
-    const containerRect = mainContainerRef.current.getBoundingClientRect();
-    const newWidthPx = e.clientX - containerRect.left; // Vị trí chuột so với container
-    const newWidthPercent = (newWidthPx / containerRect.width) * 100;
-
-    const clampedWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidthPercent));
-
-    setListWidth(clampedWidth);
-  }, [isDragging]);
-
-  // Thêm và xóa event listener trên window
-  useEffect(() => {
-    // Chỉ kích hoạt kéo thả trên màn hình lớn
-    if (isDragging && !isSmallScreen) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+  const handleSelectBook = (book) => {
+    if (book && book.id) {
+      navigate(`/book/${book.id}`);
     }
+  };
 
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, isSmallScreen, handleMouseMove, handleMouseUp]);
-
-  // Render cho Mobile và Tablet
-  if (isSmallScreen) {
-    return (
-      <div className="app-container">
-        <header className="header-bar">
-          <HeaderBar/>
-        </header>
-        <main className="main-content">
-          {activePanel === 'list' ? <div className="section-content"><ListSection /></div> : <div className="section-content"><BookSection /></div>}
-        </main>
-        <footer className="footer-bar">
-          <div className="mobile-nav">
-            <button onClick={() => setActivePanel('list')} className={activePanel === 'list' ? 'active' : ''} title="List Section">☰</button>
-            <button onClick={() => setActivePanel('book')} className={activePanel === 'book' ? 'active' : ''} title="Book Section">📖</button>
-          </div>
-        </footer>
-      </div>
-    );
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">Đang tải thư viện...</div>;
   }
 
   return (
-    <div className="app-container">
-      <HeaderBar />
-      {/* Render cho Desktop */}
-      <main ref={mainContainerRef} className="main-content" style={{ userSelect: isDragging ? 'none' : 'auto' }}>
-        <div 
-          className={`list-section ${isDragging ? 'no-transition' : ''}`} 
-          style={{ width: `${listWidth}%`, position: 'relative' }}
+    <div className="min-h-screen bg-background">
+      <HeaderBar searchData={allBooks} onSearchResult={handleSearchResult}/>
+      {/* Banner tràn viền */}
+      <div className="relative w-full">
+        <Swiper
+          modules={[Autoplay]}
+          spaceBetween={0}
+          slidesPerView={1}
+          loop
+          autoplay={{ delay: 3000, disableOnInteraction: false }}
+          className="w-full h-[300px]"
         >
-          {listWidth < MAX_WIDTH && (
-            <button onClick={() => setListWidth(MAX_WIDTH)} className="maximize-btn" title="Phóng to" style={{right: 8, top: 8}}>
-              &#x25A1; {/* Square symbol */}
-            </button>
-          )}
-          <div className="section-content">
-            <ListSection onSelectBook={setSelectedBook}/>
-          </div>
-          
-        </div>
-        
-        {/* Chỉ hiển thị thanh chia trên Desktop */}
-        <div className="divider" onMouseDown={handleMouseDown}></div>
-
-        <div 
-          className={`book-section ${isDragging ? 'no-transition' : ''}`} 
-          style={{ width: `calc(100% - ${listWidth}% - 8px)`, position: 'relative' }}
-        >
-          {listWidth > MIN_WIDTH && (
-            <button onClick={() => setListWidth(MIN_WIDTH)} className="maximize-btn" title="Phóng to" style={{ left: 8, top: 8 }}>
-              &#x25A1; {/* Square symbol */}
-            </button>
-          )}
-          <div className="section-content">
-            <BookSection book={selectedBook}/>
-          </div>
+          <SwiperSlide>
+            <img src="https://307a0e78.vws.vegacdn.vn/view/v2/image/img.banner_web_v2/0/0/0/4459.jpg?v=1&w=1920&h=600" alt="Banner 1" className="w-full h-[300px] object-cover" />
+          </SwiperSlide>
+          <SwiperSlide>
+            <img src="https://307a0e78.vws.vegacdn.vn/view/v2/image/img.banner_web_v2/0/0/0/3979.jpg?v=1&w=1920&h=600" alt="Banner 2" className="w-full h-[300px] object-cover" />
+          </SwiperSlide>
+          {/* Thêm các SwiperSlide khác nếu muốn */}
+        </Swiper>
+        <div className="pointer-events-none absolute bottom-0 left-0 w-full h-24 bg-linear-to-t from-white to-transparent" />
+      </div>
+      <main className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2 text-balance">Khám phá thế giới sách</h1>
+          <p className="text-muted-foreground text-lg">Hàng ngàn đầu sách đang chờ bạn khám phá</p>
+          <ListSection books={filteredBooks} onSelectBook={handleSelectBook} />
         </div>
       </main>
     </div>
   );
-}
+};
 
 export default HomePage;

@@ -1,122 +1,67 @@
-import styles from './ListSection.module.css';
-import { useRef, useState, useEffect, useCallback } from 'react';
-import { sampleCategories } from '@/lib/mockdata';
+import BookCard from "@/components/BookCard";
 
 const Slider = ({ category, onSelectBook }) => {
-  const trackRef = useRef(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-  const [activeCardId, setActiveCardId] = useState(null);
-
-  const checkScroll = useCallback(() => {
-    if (trackRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = trackRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1); // -1 for precision
-    }
-  }, []);
-
-  useEffect(() => {
-    const trackElement = trackRef.current;
-    if (trackElement) {
-      // Initial check
-      checkScroll();
-      // Check on scroll
-      trackElement.addEventListener('scroll', checkScroll);
-      // Check on resize
-      const resizeObserver = new ResizeObserver(checkScroll);
-      resizeObserver.observe(trackElement);
-
-      return () => {
-        trackElement.removeEventListener('scroll', checkScroll);
-        resizeObserver.unobserve(trackElement);
-      };
-    }
-  }, [category.books, checkScroll]);
-
-  const handleNavClick = (direction) => {
-    if (trackRef.current) {
-      const scrollAmount = trackRef.current.clientWidth * 0.8; // Scroll 80% of the visible width
-      trackRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
-    }
-  };
-
-  const handleCardClick = (bookId) => {
-    if (activeCardId === bookId) {
-      setActiveCardId(null);
-      onSelectBook(null);
-    } else {
-      setActiveCardId(bookId);
-      const book = category.books.find(b => b.id === bookId);
-      if(book) onSelectBook(book);
-    }
-  };
-
   return (
-    <div className={styles.categorySection}>
-      <h2 className={styles.categoryTitle}>{category.categoryTitle}</h2>
-      <div className={styles.sliderWrapper}>
-        {canScrollLeft && (
-          <button
-            className={`${styles.navButton} ${styles.left}`}
-            onClick={() => handleNavClick('left')}
-            aria-label="Scroll Left"
-          >
-            &#8249;
-          </button>
-        )}
-        <div className={styles.sliderContainer} ref={trackRef}>
-          <div className={styles.sliderTrack}>
-            {category.books.map(book => (
-              <div 
-                key={book.id} 
-                className={`${styles.cardContainer} ${activeCardId === book.id ? styles.isActive : ''}`}
-                onClick={() => handleCardClick(book.id)}
-              >
-                <div className={styles.summaryCard}>
-                  <img src={book.imageUrl} alt={`Bìa sách ${book.title}`} className={styles.bookImage} />
-                  <h3 className={styles.bookTitle}>{book.title}</h3>
-                </div>
-                <div className={styles.detailCard}>
-                  <img src={book.imageUrl} alt={`Bìa sách ${book.title}`} className={styles.bookImage} />
-                  <div className={styles.detailContent}>
-                    <h3 className={styles.bookTitle}>{book.title}</h3>
-                    <p className={styles.bookAuthor}>Tác giả: {book.author}</p>
-                    <p className={styles.bookDescription}>{book.description}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+    <div className="mb-10">
+      <h2 className="text-2xl font-semibold mb-4">{category.categoryTitle}</h2>
+      <div className="relative">
+        <div className="flex gap-4 overflow-x-auto pb-2 scroll-smooth">
+          {category.books.map(book => (
+            <div
+              key={book.id}
+              className="min-w-[180px] max-w-[180px] shrink-0 cursor-pointer"
+              onClick={() => onSelectBook && onSelectBook(book)}
+            >
+              <BookCard book={book} />
+            </div>
+          ))}
         </div>
-        {canScrollRight && (
-          <button
-            className={`${styles.navButton} ${styles.right}`}
-            onClick={() => handleNavClick('right')}
-            aria-label="Scroll Right"
-          >
-            &#8250;
-          </button>
-        )}
       </div>
     </div>
   );
 };
 
-export default function ListSection({ onSelectBook }) {
+export default function ListSection({ books = [], onSelectBook }) {
+  // Gom nhóm sách theo Subject (Category)
+  const getCategorizedBooks = () => {
+    const groupedData = {};
+    books.forEach(book => {
+      const subjects = Array.isArray(book.subjects) && book.subjects.length > 0
+        ? book.subjects
+        : [{ name: 'Khác' }];
+      subjects.forEach(subject => {
+        const subjectName = subject.name || 'Khác';
+        if (!groupedData[subjectName]) {
+          groupedData[subjectName] = [];
+        }
+        if (!groupedData[subjectName].find(b => b.id === book.id)) {
+          groupedData[subjectName].push(book);
+        }
+      });
+    });
+    return Object.keys(groupedData).map(key => ({
+      categoryTitle: key,
+      books: groupedData[key]
+    }));
+  };
+
+  const categories = getCategorizedBooks();
+
+  if (!books || books.length === 0) {
+    return (
+      <div className="flex min-h-[300px] justify-center items-center">
+        <p className="text-slate-500">Chưa có cuốn sách nào trong thư viện.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className={styles.sectionContainer}>
-      <section style={{ backgroundColor: '#f9f9f9', overflow: 'hidden' }}>
-        {sampleCategories.map((category, index) => (
-          <div key={index} className={styles.sliderCard}>
-            <Slider category={category} onSelectBook={onSelectBook} />
-          </div>
-        ))}      
+    <div className="w-full">
+      <section>
+        {categories.map((category, index) => (
+          <Slider key={index} category={category} onSelectBook={onSelectBook} />
+        ))}
       </section>
     </div>
-
-      );
+  );
 }

@@ -12,37 +12,27 @@ body {
   color: rgba(0, 0, 0, 0.87);
 }
 
-/* Container chính của App */
-.app-container {
+/* .app-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
 }
 
-/* Header */
-.header-bar {
-  /* padding: 0.5rem 2rem;
-  background-color: #fff;
-  border-bottom: 1px solid #ccc; */
-}
-
-/* Vùng nội dung chính chứa 2 section */
 .main-content {
   display: flex;
   flex-grow: 1;
-  overflow: hidden; /* Ngăn nội dung tràn ra ngoài */
+  overflow: hidden; 
+  height: 0;
 }
 
-/* Các section con */
 .list-section, .book-section {
-  overflow-y: auto; /* Cho phép cuộn nếu nội dung dài */
-  box-sizing: border-box;
-  /* Thêm transition để thay đổi kích thước mượt mà hơn */
+  height: 100%;
+  overflow-y: auto; 
+  position: relative;
   transition: width 0.1s ease-out;
 }
 
-/* Thêm padding cho nội dung bên trong section */
 .section-content {
     margin: 1rem;  
     padding: 1rem;
@@ -52,25 +42,23 @@ body {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     width: calc(100% - 2rem);
     height: calc(100% - 2rem);
+    box-sizing: border-box;
 }
 
-/* Vô hiệu hóa transition khi đang kéo */
 .list-section.no-transition,
 .book-section.no-transition {
   transition: none;
 }
 
-/* Thanh phân chia kéo-thả */
 .divider {
   width: 6px;
   background-color: #ccd;
   flex-shrink: 0;
   cursor: pointer;
-  cursor: col-resize; /* Con trỏ chuột thay đổi khi di vào */
+  cursor: col-resize; 
   z-index: 10;
 }
 
-/* Nút phóng to */
 .maximize-btn {
   position: absolute;
   z-index: 20;
@@ -85,9 +73,8 @@ body {
   line-height: 1;
 }
 
-/* Styles cho Mobile Navigation */
 .mobile-nav {
-  margin: 0 auto; /* Căn giữa các nút */
+  margin: 0 auto; 
   display: flex;
 }
 
@@ -96,7 +83,7 @@ body {
   background-color: transparent;
   border: none;
   color: #aaa;
-  font-size: 1.5rem; /* Tăng kích thước icon */
+  font-size: 1.5rem; 
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all 0.2s ease-in-out;
@@ -105,4 +92,4 @@ body {
 .mobile-nav button.active {
   color: #fff;
   border-bottom-color: #fff;
-}
+} */
