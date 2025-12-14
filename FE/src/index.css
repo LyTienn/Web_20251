@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* html {
+  scrollbar-gutter: stable;
+} */
+
 /* Reset và styles cơ bản */
 body {
   margin: 0;
@@ -10,6 +14,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: #fff;
   color: rgba(0, 0, 0, 0.87);
+  /* overflow-y: scroll; */
 }
 
 /* .app-container {
