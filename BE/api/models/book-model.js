@@ -9,6 +9,10 @@ const Book = sequelize.define("books", {
   language: { type: DataTypes.STRING(10) },
   download_count: { type: DataTypes.INTEGER },
   summary: { type: DataTypes.TEXT },
+  image_url: { type: DataTypes.TEXT },
+  txt_url: { type: DataTypes.TEXT },
+  created_at: { type: DataTypes.DATE },
+  type: { type: DataTypes.ENUM('FREE', 'PREMIUM'), allowNull: false, defaultValue: 'FREE' },
 }, {
   timestamps: false
 });
