@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { Heart, BookOpen, Share2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "react-toastify";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import HeaderBar from "./HeaderBar";
 import axios from "@/config/Axios-config";
+import { useSelector } from "react-redux";
 // import { ReviewsSection } from "@/components/Review-section";
 // import { ReviewDialog } from "@/components/Review-dialog";
 
@@ -24,6 +26,7 @@ export default function BookSection({ book: bookProp }) {
   const [reviewRefreshKey, setReviewRefreshKey] = useState(0);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [book, setBook] = useState(bookProp || null);
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
 
   useEffect(() => {
     if (!bookProp && params.id) {
@@ -46,14 +49,10 @@ export default function BookSection({ book: bookProp }) {
   }
 
   const handleToggleFavorite = () => {
-    if (!user) {
-      toast({
-        title: "Vui lòng đăng nhập",
-        description: "Bạn cần đăng nhập để thêm sách vào yêu thích",
-        variant: "destructive",
-      })
-    router.push("/login")
-    return
+    if (!user || !isAuthenticated) {
+      toast.error("Bạn cần đăng nhập để thêm sách vào yêu thích");
+      navigate("/login");
+      return;
     }
 
   const bookshelves = JSON.parse(localStorage.getItem("bookshelves") || "[]")
@@ -94,9 +93,7 @@ export default function BookSection({ book: bookProp }) {
   const handleCopyLink = () => {
     const url = window.location.href
     navigator.clipboard.writeText(url)
-    toast({
-      title: "Đã sao chép liên kết",
-    })
+    toast.success("Đã sao chép liên kết vào clipboard");
     setShareDialogOpen(false)
   }
 
@@ -131,7 +128,7 @@ export default function BookSection({ book: bookProp }) {
       <HeaderBar />
       <main className="container mx-auto px-4 py-8">
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-          <Link href="/" className="hover:text-foreground transition-colors">
+          <Link to="/" className="hover:font-medium transition-colors">
             Trang chủ
           </Link>
           <ChevronRight className="h-4 w-4" />
@@ -156,8 +153,8 @@ export default function BookSection({ book: bookProp }) {
               <p className="text-xl text-muted-foreground mb-4">{book.author.name}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button className='hover:bg-gray-200' variant={isFavorite ? "default" : "outline"} size="icon">
-                <Heart className={`h-5 w-5 ${isFavorite ? "fill-current" : ""}`} onClick={handleToggleFavorite}/>
+              <Button className='hover:bg-gray-200' variant={isFavorite ? "default" : "outline"} size="icon" onClick={handleToggleFavorite}>
+                <Heart className={`h-5 w-5 ${isFavorite ? "fill-current" : ""}`} />
               </Button>
               <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
                 <DialogTrigger asChild>
