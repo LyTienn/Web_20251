@@ -1,0 +1,210 @@
+import UserBookshelf from "../models/user-bookshelf-model.js";
+import Book from "../models/book-model.js";
+import Author from "../models/author-model.js";
+import Subject from "../models/subject-model.js";
+
+class BookshelfController {
+  // Thêm sách vào bookshelf
+  static async addToBookshelf(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { bookId } = req.params;
+      const { status } = req.body; // 'FAVORITE' hoặc 'READING'
+
+      // Validate status
+      if (!["FAVORITE", "READING"].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Status must be either FAVORITE or READING",
+        });
+      }
+
+      // Kiểm tra sách có tồn tại không
+      const book = await Book.findByPk(bookId);
+      if (!book) {
+        return res.status(404).json({
+          success: false,
+          message: "Book not found",
+        });
+      }
+
+      // Kiểm tra đã tồn tại chưa
+      const existing = await UserBookshelf.findOne({
+        where: {
+          user_id: userId,
+          book_id: bookId,
+          status: status,
+        },
+      });
+
+      if (existing) {
+        return res.status(409).json({
+          success: false,
+          message: `Book already in your ${status.toLowerCase()} list`,
+        });
+      }
+
+      // Thêm vào bookshelf
+      await UserBookshelf.create({
+        user_id: userId,
+        book_id: bookId,
+        status: status,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: `Book added to ${status.toLowerCase()} successfully`,
+      });
+    } catch (error) {
+      console.error("Add to bookshelf error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error",
+      });
+    }
+  }
+
+  // Lấy bookshelf của user
+  static async getUserBookshelf(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { status } = req.query; // optional filter
+
+      const where = { user_id: userId };
+      if (status && ["FAVORITE", "READING"].includes(status)) {
+        where.status = status;
+      }
+
+      const bookshelfItems = await UserBookshelf.findAll({
+        where,
+        include: [
+          {
+            model: Book,
+            as: "book",
+            attributes: ["id", "title", "image_url", "summary"],
+            include: [
+              {
+                model: Author,
+                as: "author",
+                attributes: ["name"],
+              },
+              {
+                model: Subject,
+                as: "subjects",
+                attributes: ["name"],
+                through: { attributes: [] },
+              },
+            ],
+          },
+        ],
+        order: [["added_at", "DESC"]],
+      });
+
+      // Group by status
+      const grouped = {
+        FAVORITE: [],
+        READING: [],
+      };
+
+      bookshelfItems.forEach((item) => {
+        grouped[item.status].push({
+          ...item.book.toJSON(),
+          addedAt: item.added_at,
+        });
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          favorites: grouped.FAVORITE,
+          reading: grouped.READING,
+          total: bookshelfItems.length,
+        },
+      });
+    } catch (error) {
+      console.error("Get user bookshelf error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error",
+      });
+    }
+  }
+
+  // Xóa sách khỏi bookshelf
+  static async removeFromBookshelf(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { bookId } = req.params;
+      const { status } = req.query; // 'FAVORITE' hoặc 'READING'
+
+      if (!status || !["FAVORITE", "READING"].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Status query parameter is required (FAVORITE or READING)",
+        });
+      }
+
+      const deleted = await UserBookshelf.destroy({
+        where: {
+          user_id: userId,
+          book_id: bookId,
+          status: status,
+        },
+      });
+
+      if (deleted === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Book not found in your bookshelf",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: `Book removed from ${status.toLowerCase()} successfully`,
+      });
+    } catch (error) {
+      console.error("Remove from bookshelf error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error",
+      });
+    }
+  }
+
+  // Kiểm tra sách có trong bookshelf không
+  static async checkBookInBookshelf(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { bookId } = req.params;
+
+      const items = await UserBookshelf.findAll({
+        where: {
+          user_id: userId,
+          book_id: bookId,
+        },
+        attributes: ["status"],
+      });
+
+      const statuses = items.map((item) => item.status);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          inBookshelf: items.length > 0,
+          statuses: statuses,
+          isFavorite: statuses.includes("FAVORITE"),
+          isReading: statuses.includes("READING"),
+        },
+      });
+    } catch (error) {
+      console.error("Check book in bookshelf error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error",
+      });
+    }
+  }
+}
+
+export default BookshelfController;
