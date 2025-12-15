@@ -2,12 +2,15 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import "./models/index.js";
 import sequelize from "./config/db-config.js";
 import authRoutes from "./routes/auth-route.js";
 import userRoutes from "./routes/user-route.js";
 import bookRoutes from "./routes/book-route.js";
 import subjectRoutes from "./routes/subject-route.js";
 import authorRoutes from "./routes/author-route.js";
+import commentRoutes from "./routes/comment-route.js";
+import bookshelfRoutes from "./routes/bookshelf-route.js";
 
 dotenv.config();
 
@@ -31,6 +34,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/books", bookRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/authors", authorRoutes);
+app.use("/api/comments", commentRoutes);
+app.use("/api/bookshelf", bookshelfRoutes);
 
 app.get("/api/health", async (req, res) => {
   try {
