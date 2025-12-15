@@ -172,52 +172,6 @@ class BookshelfController {
     }
   }
 
-  // Cập nhật status (chuyển từ READING sang FAVORITE hoặc ngược lại)
-  static async updateBookshelfStatus(req, res) {
-    try {
-      const userId = req.user.userId;
-      const { bookId } = req.params;
-      const { oldStatus, newStatus } = req.body;
-
-      if (
-        !["FAVORITE", "READING"].includes(oldStatus) ||
-        !["FAVORITE", "READING"].includes(newStatus)
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid status values",
-        });
-      }
-
-      // Xóa old status
-      await UserBookshelf.destroy({
-        where: {
-          user_id: userId,
-          book_id: bookId,
-          status: oldStatus,
-        },
-      });
-
-      // Thêm new status
-      await UserBookshelf.create({
-        user_id: userId,
-        book_id: bookId,
-        status: newStatus,
-      });
-
-      res.status(200).json({
-        success: true,
-        message: `Book status updated from ${oldStatus} to ${newStatus}`,
-      });
-    } catch (error) {
-      console.error("Update bookshelf status error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Server error",
-      });
-    }
-  }
-
   // Kiểm tra sách có trong bookshelf không
   static async checkBookInBookshelf(req, res) {
     try {

@@ -27,21 +27,6 @@ router.get(
   BookshelfController.checkBookInBookshelf
 );
 
-// Cập nhật status
-router.put(
-  "/books/:bookId/status",
-  authenticate,
-  [
-    body("oldStatus")
-      .isIn(["FAVORITE", "READING"])
-      .withMessage("Old status must be FAVORITE or READING"),
-    body("newStatus")
-      .isIn(["FAVORITE", "READING"])
-      .withMessage("New status must be FAVORITE or READING"),
-  ],
-  BookshelfController.updateBookshelfStatus
-);
-
 // Xóa sách khỏi bookshelf
 router.delete(
   "/books/:bookId",

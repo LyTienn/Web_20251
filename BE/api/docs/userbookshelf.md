@@ -198,62 +198,7 @@ Cookie: accessToken=<token>
 }
 ```
 
----
-
-### 1.4. Cập Nhật Status
-
-Chuyển sách từ READING sang FAVORITE hoặc ngược lại.
-
-**Endpoint:** `PUT /books/:bookId/status`
-
-**Authentication:** Required
-
-**Path Parameters:**
-
-- `bookId` (required): ID của sách
-
-**Headers:**
-
-```
-Content-Type: application/json
-Cookie: accessToken=<token>
-```
-
-**Request Body:**
-
-```json
-{
-  "oldStatus": "READING",
-  "newStatus": "FAVORITE"
-}
-```
-
-**Validation Rules:**
-
-- `oldStatus` (required): 'FAVORITE' hoặc 'READING'
-- `newStatus` (required): 'FAVORITE' hoặc 'READING'
-
-**Response Success (200):**
-
-```json
-{
-  "success": true,
-  "message": "Book status updated from READING to FAVORITE"
-}
-```
-
-**Response Error (400):**
-
-```json
-{
-  "success": false,
-  "message": "Invalid status values"
-}
-```
-
----
-
-### 1.5. Xóa Sách khỏi Bookshelf
+### 1.4. Xóa Sách khỏi Bookshelf
 
 Xóa sách khỏi danh sách yêu thích hoặc đang đọc.
 
