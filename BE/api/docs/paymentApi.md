@@ -376,6 +376,3 @@ Trên trang VNPay, click **"Hủy giao dịch"** thay vì thanh toán → Kiểm
 ```
 302 Redirect → http://localhost:5173/payment/failed
 ```
-
----
-````
