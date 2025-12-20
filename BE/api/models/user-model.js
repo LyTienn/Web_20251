@@ -39,6 +39,10 @@ const User = sequelize.define(
       allowNull: false,
       defaultValue: "USER",
     },
+    tier: {
+      type: DataTypes.ENUM("FREE", "PREMIUM"),
+      defaultValue: "FREE",
+    },
     refresh_token: {
       type: DataTypes.TEXT,
       allowNull: true,

@@ -11,6 +11,7 @@ import subjectRoutes from "./routes/subject-route.js";
 import authorRoutes from "./routes/author-route.js";
 import commentRoutes from "./routes/comment-route.js";
 import bookshelfRoutes from "./routes/bookshelf-route.js";
+import paymentRoute from "./routes/payment-route.js";
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.use("/api/subjects", subjectRoutes);
 app.use("/api/authors", authorRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/bookshelf", bookshelfRoutes);
+app.use("/api/payment", paymentRoute);
 
 app.get("/api/health", async (req, res) => {
   try {
