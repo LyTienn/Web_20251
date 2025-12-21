@@ -11,11 +11,9 @@ export default function BookCard({ book, subject }) {
                     alt={book.title}
                     className='absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
                 />
-                {book.isFree && (
-                    <Badge className="absolute top-2 right-2 bg-green-600 hover:bg-green-700">
-                    Miễn phí
-                    </Badge>
-                )}
+                <Badge className={`absolute bottom-2 right-2 ${book.type === 'FREE' ? 'bg-green-500' : 'bg-yellow-600'}`}>
+                    {book.type === 'FREE' ? 'Miễn phí' : 'Hội viên'}
+                </Badge>
             </div>
             <CardContent className="p-4">
                 <h3 className="font-semibold text-base line-clamp-2 mb-1">
@@ -28,9 +26,6 @@ export default function BookCard({ book, subject }) {
                     </Badge>
                 )}
             </CardContent>
-            {/* <CardFooter className="p-4 pt-0 flex justify-between items-center">
-                <p className="text-xs text-muted-foreground">{book.totalPages} trang</p>
-            </CardFooter> */}
         </Card>
     
 )}

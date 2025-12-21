@@ -156,7 +156,7 @@ export default function ReadBookPage() {
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <aside 
         className={`
-            bg-white border-r border-slate-200 flex-shrink-0 transition-all duration-300 ease-in-out flex flex-col
+            bg-white border-r border-slate-200 shrink-0 transition-all duration-300 ease-in-out flex flex-col
             ${sidebarOpen ? 'w-80 translate-x-0' : 'w-12'} 
         `}
       >
@@ -219,7 +219,7 @@ export default function ReadBookPage() {
       {/* === RIGHT MAIN CONTENT (Nội dung đọc) === */}
       <main className="flex-1 flex flex-col min-w-0 bg-white h-full">
         
-        <div className="h-14 border-b bg-white flex items-center px-4 justify-between shadow-sm z-10 flex-shrink-0">
+        <div className="h-14 border-b bg-white flex items-center px-4 justify-between shadow-sm z-10 shrink-0">
             <div className="flex items-center gap-3">
                 <Link to={`/book/${book.id}`} title="Quay lại">
                     <Button variant="ghost" size="sm" className="gap-2 text-slate-600 hover:text-slate-900">
@@ -243,7 +243,7 @@ export default function ReadBookPage() {
                       {selectedChapter.title}
                     </h2>
                     
-                    <div className="whitespace-pre-line text-slate-700 leading-relaxed text-justify font-serif text-lg break-words ">
+                    <div className="whitespace-pre-line text-slate-700 leading-relaxed text-justify font-serif text-lg wrap-break-word ">
                       {selectedChapter.content || (
                         <p className="italic text-slate-400 text-center py-10">
                           (Nội dung đang cập nhật...)
