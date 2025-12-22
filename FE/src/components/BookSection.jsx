@@ -15,8 +15,8 @@ import {
 import HeaderBar from "./HeaderBar";
 import axios from "@/config/Axios-config";
 import { useSelector } from "react-redux";
-// import { ReviewsSection } from "@/components/Review-section";
-// import { ReviewDialog } from "@/components/Review-dialog";
+import { ReviewsSection } from "@/components/Review-section";
+import ReviewDialog from "@/components/Review-dialog";
 
 export default function BookSection({ book: bookProp }) {
   const params = useParams();
@@ -26,6 +26,7 @@ export default function BookSection({ book: bookProp }) {
   const [reviewRefreshKey, setReviewRefreshKey] = useState(0);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [book, setBook] = useState(bookProp || null);
+  const [showFullSummary, setShowFullSummary] = useState(false);
   const { user, isAuthenticated } = useSelector((state) => state.auth);
 
   useEffect(() => {
@@ -136,8 +137,8 @@ export default function BookSection({ book: bookProp }) {
         </nav>
       <div className="grid md:grid-cols-[300px_1fr] gap-8">
         <div>
-          <div className="relative aspect-square rounded-lg overflow-hidden mb-4">
-            <img src={book?.imageUrl} alt={book?.title} fill className="object-cover" />
+          <div className="relative aspect-2/3 rounded-lg overflow-hidden mb-4">
+            <img src={book.imageUrl || book.image_url} alt={book?.title} className="absolute inset-0 w-full h-full object-cover" />
           </div>
           <div className="space-y-2">
             <Button className="w-full hover:bg-gray-100" size="lg" onClick={handleReadBook}>
@@ -151,6 +152,26 @@ export default function BookSection({ book: bookProp }) {
             <div className="flex-1">
               <h1 className="text-3xl font-bold mb-2 text-balance">{book.title}</h1>
               <p className="text-xl text-muted-foreground mb-4">{book.author.name}</p>
+              <div className="text-sm text-muted-foreground mb-4 relative">
+                <span
+                  className={
+                    showFullSummary
+                      ? ""
+                      : "line-clamp-2"
+                  }
+                >
+                  {book.summary}
+                </span>
+                {book.summary && book.summary.length > 120 && (
+                  <button
+                    className="ml-2 font-bold hover:underline bg-transparent border-none p-0 inline cursor-pointer"
+                    style={{ fontSize: "inherit" }}
+                    onClick={() => setShowFullSummary((prev) => !prev)}
+                  >
+                    {showFullSummary ? "Thu gọn" : "Xem thêm"}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button className='hover:bg-gray-200' variant={isFavorite ? "default" : "outline"} size="icon" onClick={handleToggleFavorite}>
@@ -210,19 +231,17 @@ export default function BookSection({ book: bookProp }) {
                   </div>
                 </DialogContent>
               </Dialog>
-              {/* {bookProp.isFree ? (
+              {book.type === 'FREE' ? (
                 <Badge className="bg-green-400">Miễn phí</Badge>
               ) : (
                 <Badge className='bg-gray-200' variant="secondary">Hội viên</Badge>
-              )} */}
+              )}
             </div>
           </div>
-
-          {/* <p className="text-muted-foreground mb-4">{book.author}</p> */}
         </div>
       </div>
       
-      {/* <div className="mt-12 border-t pt-8">
+      <div className="mt-4 pt-8">
         <div className="mb-6">
           {user ? (
               <ReviewDialog
@@ -239,7 +258,7 @@ export default function BookSection({ book: bookProp }) {
             )}
         </div>
         <ReviewsSection bookId={book.id} refreshKey={reviewRefreshKey} />
-      </div> */}
+      </div>
     </main>
     </div>
   );  

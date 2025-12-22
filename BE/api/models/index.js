@@ -11,6 +11,7 @@ import UserBookshelf from "./user-bookshelf-model.js";
 import Chapter from "./chapter-model.js";
 import Bookshelf from "./bookshelf-model.js";
 import BookBookshelf from "./book_bookshelf-model.js";
+import Subscription from "./subscription-model.js"
 
 // Định nghĩa tất cả associations tại ĐÂY
 const setupAssociations = () => {
@@ -77,6 +78,10 @@ const setupAssociations = () => {
   // Book - Chapter
   Book.hasMany(Chapter, { foreignKey: "book_id", as: "chapters" });
   Chapter.belongsTo(Book, { foreignKey: "book_id", as: "book" });
+
+  // User - Subscription (One to Many)
+  User.hasMany(Subscription, { foreignKey: "user_id", as: "subscriptions" });
+  Subscription.belongsTo(User, { foreignKey: "user_id", as: "user" });
 };
 
 // Gọi setup associations
@@ -95,6 +100,7 @@ export {
   Chapter,
   Bookshelf,
   BookBookshelf,
+  Subscription,
 };
 
 export default {
@@ -109,4 +115,5 @@ export default {
   Chapter,
   Bookshelf,
   BookBookshelf,
+  Subscription,
 };
