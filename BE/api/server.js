@@ -16,6 +16,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const DB_SYNC = process.env.DB_SYNC || "alter"; // options: 'alter' | 'force' | 'none'
 
 // Middleware
 app.use(
@@ -99,6 +100,17 @@ const startServer = async () => {
   try {
     await sequelize.authenticate();
     console.log("Database connection established successfully.");
+
+    // Sync models to database (create/update tables)
+    if (DB_SYNC !== "none") {
+      const syncOptions = DB_SYNC === "force" ? { force: true } : { alter: true };
+      await sequelize.sync(syncOptions);
+      console.log(
+        `Sequelize sync completed with option: ${DB_SYNC} (${JSON.stringify(syncOptions)})`
+      );
+    } else {
+      console.log("Sequelize sync skipped (DB_SYNC=none).");
+    }
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
