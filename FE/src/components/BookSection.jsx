@@ -13,7 +13,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import HeaderBar from "./HeaderBar";
-import axios from "@/config/Axios-config";
+// THAY ĐỔI 1: Import axios từ config để nhận interceptor và cookie
+import axios from "@/config/Axios-config"; 
 import { useSelector } from "react-redux";
 import { ReviewsSection } from "@/components/Review-section";
 import ReviewDialog from "@/components/Review-dialog";
@@ -27,19 +28,44 @@ export default function BookSection({ book: bookProp }) {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [book, setBook] = useState(bookProp || null);
   const [showFullSummary, setShowFullSummary] = useState(false);
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  
+  // Chỉ lấy trạng thái đăng nhập, không cần token thủ công
+  const { isAuthenticated } = useSelector((state) => state.auth);
 
+  // LOGIC 1: Load thông tin sách
   useEffect(() => {
     if (!bookProp && params.id) {
       setLoading(true);
       axios.get(`/books/${params.id}`)
         .then(res => {
-          setBook(res.data);
+          // Vì interceptor của bạn trả về response.data, nên 'res' ở đây chính là body response
+          // API trả về { success: true, data: { ...book } } nên setBook lấy res.data
+          setBook(res.data || res); 
         })
         .catch(() => setBook(null))
         .finally(() => setLoading(false));
     }
   }, [params.id, bookProp]);
+
+  // LOGIC 2: Kiểm tra trạng thái yêu thích ngay khi load (Fix lỗi F5 mất màu)
+  useEffect(() => {
+    if (isAuthenticated && book?.id) {
+      const checkFavoriteStatus = async () => {
+        try {
+          // Gọi API check
+          const res = await axios.get(`/bookshelf/books/${book.id}/check`);
+          
+          // res là body response do interceptor xử lý
+          if (res.success && res.data) {
+            setIsFavorite(res.data.isFavorite);
+          }
+        } catch (error) {
+          console.error("Lỗi check status:", error);
+        }
+      };
+      checkFavoriteStatus();
+    }
+  }, [isAuthenticated, book?.id]);
 
   if(!book) {
     return (
@@ -49,42 +75,40 @@ export default function BookSection({ book: bookProp }) {
     );
   }
 
-  const handleToggleFavorite = () => {
-    if (!user || !isAuthenticated) {
+  // LOGIC 3: Xử lý bấm nút tim (Toggle)
+  const handleToggleFavorite = async () => {
+    if (!isAuthenticated) {
       toast.error("Bạn cần đăng nhập để thêm sách vào yêu thích");
       navigate("/login");
       return;
     }
 
-  const bookshelves = JSON.parse(localStorage.getItem("bookshelves") || "[]")
+    // 1. Optimistic Update: Cập nhật UI ngay lập tức
+    const previousState = isFavorite;
+    setIsFavorite(!isFavorite);
 
-  if (isFavorite) {
-    // Remove from favorites
-    const updated = bookshelves.filter(
-      (item) => !(item.userId === user.id && item.bookId === book?.id && item.category === "favorite"),
-    )
-    localStorage.setItem("bookshelves", JSON.stringify(updated))
-    setIsFavorite(false)
-    toast({
-      title: "Đã xóa khỏi yêu thích",
-    })
-  } else {
-    // Add to favorites
-    bookshelves.push({
-      userId: user.id,
-      bookId: book?.id || "",
-      category: "favorite",
-      addedAt: new Date().toISOString(),
-    })
-    localStorage.setItem("bookshelves", JSON.stringify(bookshelves))
-    setIsFavorite(true)
-    toast({
-      title: "Đã thêm vào yêu thích",
-    })
+    try {
+      if (previousState) {
+        // Đang like -> Xóa (DELETE)
+        await axios.delete(`/bookshelf/books/${book.id}?status=FAVORITE`);
+        toast.success("Đã xóa sách khỏi yêu thích");
+      } else {
+        // Chưa like -> Thêm (POST)
+        await axios.post(`/bookshelf/books/${book.id}`, { status: "FAVORITE" });
+        toast.success("Đã thêm sách vào yêu thích");
+      }
+      
+      // Bắn sự kiện để BookShelf cập nhật lại list
+      window.dispatchEvent(new Event("bookshelf-updated"));
+
+    } catch (error) {
+      // Nếu lỗi thì hoàn tác UI
+      setIsFavorite(previousState);
+      toast.error(error.message || "Đã có lỗi xảy ra.");
     }
-  }
+  };
 
-  //HANDLE READBOOK SẼ SỬA LẠI KHI CÓ USER (ĐÃ ĐĂNG NHẬP THÌ CÓ THỂ ĐỌC + SÁCH HỘI VIÊN HAY FREE)
+  // --- CÁC HÀM XỬ LÝ UI KHÁC GIỮ NGUYÊN ---
   const handleReadBook = () => {
     if(book?.id) {
       navigate(`/book/${book.id}/read`);
@@ -124,6 +148,7 @@ export default function BookSection({ book: bookProp }) {
     }
   }
 
+  // --- PHẦN UI (RETURN JSX) GIỮ NGUYÊN 100% ---
   return (
     <div className="min-h-screen bg-background">
       <HeaderBar />
@@ -151,7 +176,7 @@ export default function BookSection({ book: bookProp }) {
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex-1">
               <h1 className="text-3xl font-bold mb-2 text-balance">{book.title}</h1>
-              <p className="text-xl text-muted-foreground mb-4">{book.author.name}</p>
+              <p className="text-xl text-muted-foreground mb-4">{book.author?.name || book.author}</p>
               <div className="text-sm text-muted-foreground mb-4 relative">
                 <span
                   className={
@@ -175,7 +200,7 @@ export default function BookSection({ book: bookProp }) {
             </div>
             <div className="flex items-center gap-2">
               <Button className='hover:bg-gray-200' variant={isFavorite ? "default" : "outline"} size="icon" onClick={handleToggleFavorite}>
-                <Heart className={`h-5 w-5 ${isFavorite ? "fill-current" : ""}`} />
+                <Heart className={`h-5 w-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
               </Button>
               <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
                 <DialogTrigger asChild>
@@ -243,17 +268,16 @@ export default function BookSection({ book: bookProp }) {
       
       <div className="mt-4 pt-8">
         <div className="mb-6">
-          {user ? (
+          {isAuthenticated ? (
               <ReviewDialog
                 bookId={book.id}
-                userId={user.id}
-                userName={user.name}
                 onReviewAdded={() => setReviewRefreshKey((prev) => prev + 1)}
+                
               />
             ) : (
               <div className="text-center py-8 bg-muted rounded-lg">
                 <p className="text-muted-foreground mb-4">Vui lòng đăng nhập để đánh giá sách</p>
-                <Button onClick={() => router.push("/login")}>Đăng nhập</Button>
+                <Button onClick={() => navigate("/login")}>Đăng nhập</Button>
               </div>
             )}
         </div>
@@ -263,4 +287,3 @@ export default function BookSection({ book: bookProp }) {
     </div>
   );  
 }
-

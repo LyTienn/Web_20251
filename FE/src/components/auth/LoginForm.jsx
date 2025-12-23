@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 // import { clearAuthError } from "@/redux/Auth/AuthSlice";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 const LoginForm = () => {
     const [email, setEmail] = useState("");
@@ -16,7 +17,7 @@ const LoginForm = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    // const { isLoading, isAuthenticated } = useSelector((state) => state.auth);
+    const { isLoading } = useSelector((state) => state.auth);
 
     // useEffect(() => {
     //     if (isAuthenticated) {
@@ -32,9 +33,14 @@ const LoginForm = () => {
             return;
         }
         const res = await dispatch(loginUser({ email, password }));
+
         if(loginUser.fulfilled.match(res)){
             toast.success("Đăng nhập thành công. Chào mừng bạn quay trở lại!");
-            navigate("/")
+            navigate("/");
+        } 
+        else if (loginUser.rejected.match(res)) {
+            const errorMessage = res.payload || "Email hoặc mật khẩu không chính xác";
+            toast.error(errorMessage);
         }
     }
 
@@ -67,8 +73,19 @@ const LoginForm = () => {
                         required
                         />
                     </div>
-                    <Button type="submit" className="w-full hover:shadow-gray-400">
-                        Đăng nhập
+                    <Button 
+                        type="submit" 
+                        className="w-full hover:shadow-gray-400"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Đang xử lý...
+                            </>
+                        ) : (
+                            "Đăng nhập"
+                        )}
                     </Button>
                 </form>
             </CardContent>

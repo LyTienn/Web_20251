@@ -24,31 +24,18 @@ instance.interceptors.request.use(
 
 // Response interceptor
 instance.interceptors.response.use(
-  function (response) {
-    return response.data; // Trả data trực tiếp
+  (response) => {
+    return response.data; // Giữ nguyên logic trả về data
   },
-  async function (error) {
+  async (error) => {
     const originalRequest = error.config;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true; // Đánh dấu để tránh lặp vô hạn
-
-      try {
-        // Gọi API refresh token (Backend sẽ đọc refresh token từ cookie)
-        await instance.post('/auth/refresh');
-        
-        // Nếu refresh thành công, gọi lại request ban đầu
-        return instance(originalRequest);
-      } catch (refreshError) {
-        // Nếu refresh cũng lỗi (hết hạn cả 2 token) -> Logout
-        console.error("Session expired. Please login again.");
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      }
+    if (
+      error.response?.status === 401 && 
+      (originalRequest.url.includes('/login') || originalRequest.url.includes('/auth/login'))
+    ) {
+      return Promise.reject(error);
     }
-
-    console.error('API Error:', error.response?.data?.message || error.message);
-    return Promise.reject(error.response?.data || error);
+    return Promise.reject(error);
   }
 );
 

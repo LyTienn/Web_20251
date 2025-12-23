@@ -8,6 +8,8 @@ import "react-toastify/dist/ReactToastify.css";
 const HomePage = lazy(() => import('./pages/HomePage'));
 const Read = lazy(() => import('./pages/Read'));
 const BookSection = lazy(() => import('./components/BookSection'));
+const BookShelf = lazy(() => import('./pages/BookShelf'));
+const Profile = lazy(() => import('./pages/Profile'));
 
 const MainLayout = () => {
   return (
@@ -18,6 +20,8 @@ const MainLayout = () => {
           <Route path="*" element={<HomePage />} />
           <Route path="/book/:id/read" element={<Read />} />
           <Route path="/book/:id" element={<BookSection />} />
+          <Route path="/bookshelf" element={<BookShelf />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
       </Suspense>
     </div>

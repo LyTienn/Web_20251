@@ -15,6 +15,10 @@ const AuthSlice = createSlice({
         clearAuthError: (state) => {
             state.error = null;
         },
+        setUser: (state, action) => {
+            state.user = action.payload;
+            state.isAuthenticated = true;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -60,7 +64,8 @@ const AuthSlice = createSlice({
             .addCase(fetchUserProfile.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.isAuthenticated = true;
-                state.user = action.payload;
+                const payload = action.payload;
+                state.user = payload.data?.user || payload.user || payload;
             })
             .addCase(fetchUserProfile.rejected, (state) => {
                 state.isLoading = false;
@@ -70,5 +75,5 @@ const AuthSlice = createSlice({
     },
 });
 
-export const { clearAuthError } = AuthSlice.actions;
+export const { clearAuthError, setUser } = AuthSlice.actions;
 export default AuthSlice.reducer;
