@@ -13,7 +13,7 @@ class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 30 * 60 * 1000, // 30 minutes
+      maxAge: 60 * 60 * 1000, // 60 minutes
     });
 
     // Refresh Token cookie - long lived

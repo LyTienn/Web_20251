@@ -34,4 +34,7 @@ router.delete(
   BookshelfController.removeFromBookshelf
 );
 
+router.get("/books/:bookId/progress", authenticate, BookshelfController.getReadingProgress);
+router.put("/books/:bookId/progress", authenticate, BookshelfController.saveReadingProgress);
+
 export default router;

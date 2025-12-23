@@ -81,7 +81,7 @@ class BookshelfController {
           {
             model: Book,
             as: "book",
-            attributes: ["id", "title", "image_url", "summary"],
+            attributes: ["id", "title", "image_url", "summary", "type"],
             include: [
               {
                 model: Author,
@@ -203,6 +203,89 @@ class BookshelfController {
         success: false,
         message: "Server error",
       });
+    }
+  }
+
+  //LƯU TIẾN ĐỘ ĐỌC (PUT)
+  static async saveReadingProgress(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { bookId } = req.params;
+      const { chapterId, scrollPosition } = req.body;
+
+      if (!chapterId) {
+        return res.status(400).json({ success: false, message: "Chapter ID is required" });
+      }
+
+      let readingItem = await UserBookshelf.findOne({
+        where: { 
+            user_id: userId, 
+            book_id: bookId,
+            status: 'READING' 
+        }
+      });
+
+      if (readingItem) {
+        readingItem.last_read_chapter_id = chapterId;
+        if (scrollPosition !== undefined) {
+          readingItem.last_read_scroll_position = scrollPosition;
+        }
+        readingItem.last_read_at = new Date();
+        await readingItem.save();
+      } else {
+        await UserBookshelf.create({
+          user_id: userId,
+          book_id: bookId,
+          status: 'READING',
+          last_read_chapter_id: chapterId,
+          last_read_at: new Date()
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Progress saved successfully"
+      });
+
+    } catch (error) {
+      console.error("Save progress error:", error);
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+
+  //LẤY TIẾN ĐỘ ĐỌC (GET)
+  static async getReadingProgress(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { bookId } = req.params;
+
+      const item = await UserBookshelf.findOne({
+        where: { 
+            user_id: userId, 
+            book_id: bookId,
+            status: 'READING' 
+        },
+        attributes: ['last_read_chapter_id', 'last_read_at']
+      });
+
+      if (!item || !item.last_read_chapter_id) {
+        return res.status(200).json({
+          success: true,
+          data: { lastChapterId: null }
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          lastChapterId: item.last_read_chapter_id,
+          lastReadAt: item.last_read_at
+        }
+      });
+
+    } catch (error) {
+      console.error("Get progress error:", error);
+      return res.status(500).json({ success: false, message: "Server error" });
     }
   }
 }

@@ -48,11 +48,11 @@ const setupAssociations = () => {
   });
 
   // User - Comment - Book
-  User.hasMany(Comment, { foreignKey: "user_id", as: "comments" });
+  User.hasMany(Comment, { foreignKey: "user_id", as: "comments", onDelete: 'CASCADE' });
   Comment.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
-  Book.hasMany(Comment, { foreignKey: "book_id", as: "comments" });
-  Comment.belongsTo(Book, { foreignKey: "book_id", as: "book" });
+  Book.hasMany(Comment, { foreignKey: "book_id", as: "comments", onDelete: 'CASCADE' });
+  Comment.belongsTo(Book, { foreignKey: "book_id", as: "book" })
 
   // User - UserBookshelf - Book
   User.belongsToMany(Book, {
@@ -69,14 +69,14 @@ const setupAssociations = () => {
     as: "users",
   });
 
-  User.hasMany(UserBookshelf, { foreignKey: "user_id", as: "bookshelfItems" });
+  User.hasMany(UserBookshelf, { foreignKey: "user_id", as: "bookshelfItems", onDelete: 'CASCADE'});
   UserBookshelf.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
-  Book.hasMany(UserBookshelf, { foreignKey: "book_id", as: "bookshelfItems" });
+  Book.hasMany(UserBookshelf, { foreignKey: "book_id", as: "bookshelfItems", onDelete: 'CASCADE' });
   UserBookshelf.belongsTo(Book, { foreignKey: "book_id", as: "book" });
 
   // Book - Chapter
-  Book.hasMany(Chapter, { foreignKey: "book_id", as: "chapters" });
+  Book.hasMany(Chapter, { foreignKey: "book_id", as: "chapters", onDelete: 'CASCADE' });
   Chapter.belongsTo(Book, { foreignKey: "book_id", as: "book" });
 
   // User - Subscription (One to Many)

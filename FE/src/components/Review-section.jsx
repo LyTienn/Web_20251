@@ -107,7 +107,6 @@ export function ReviewsSection({ bookId, refreshKey }) {
     e.preventDefault();
     try {
       await axios.delete(`/comments/${deleteModal.commentId}`);
-      // Lấy lại danh sách đánh giá mới nhất
       const res = await axios.get(`/comments/books/${bookId}/comments`);
       const d = res.data;
       setReviews(
@@ -172,42 +171,53 @@ export function ReviewsSection({ bookId, refreshKey }) {
       {/* Individual Reviews */}
       <div className="space-y-4">
         <h3 className="font-semibold text-lg">Các đánh giá từ người dùng</h3>
-        {reviews.map((review) => (
-          <div key={review.id} className="border rounded-lg p-4">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <p className="font-medium">{review.userName}</p>
-                <div className="flex gap-1 mt-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-3 w-3 ${
-                        i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
-                      }`}
-                    />
-                  ))}
+        {reviews.map((review) => {
+          const currentUserId = user?.userId || user?.user_id;
+          const isCurrentUser = user && (String(review.userId) === String(currentUserId));
+          const displayName = isCurrentUser 
+              ? (user.fullName || user.full_name) 
+              : review.userName;
+
+            return (
+                <div key={review.id} className="border rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-2">
+                        <div>
+                            <p className="font-medium">
+                                {displayName} 
+                                {isCurrentUser && " (bạn)"}
+                            </p>
+                            <div className="flex gap-1 mt-1">
+                                {[...Array(5)].map((_, i) => (
+                                    <Star
+                                        key={i}
+                                        className={`h-3 w-3 ${
+                                            i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
+                                        }`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <p className="text-sm text-muted-foreground">
+                                {review.createdAt
+                                    ? new Date(review.createdAt).toLocaleDateString("vi-VN")
+                                    : ""}
+                            </p>
+                            {isCurrentUser && (
+                                <CommentMenu
+                                    commentId={review.id}
+                                    onEdit={() => openEditModal(review.id)}
+                                    onDelete={() => openDeleteModal(review.id)}
+                                />
+                            )}
+                        </div>
+                    </div>
+                    {review.comment && (
+                        <p className="text-sm text-foreground mt-2">{review.comment}</p>
+                    )}
                 </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <p className="text-sm text-muted-foreground">
-                  {review.createdAt
-                    ? new Date(review.createdAt).toLocaleDateString("vi-VN")
-                    : ""}
-                </p>
-                { user && review.userId === user.userId && (
-                  <CommentMenu
-                    commentId = {review.id}
-                    onEdit={() => openEditModal(review.id)}
-                    onDelete={() => openDeleteModal(review.id)}
-                  />
-                ) }
-              </div>
-            </div>
-            {review.comment && (
-              <p className="text-sm text-foreground mt-2">{review.comment}</p>
-            )}
-          </div>
-        ))}
+            );
+        })}
       </div>
       <Dialog open={editModal.open} onOpenChange={open => setEditModal(m => ({ ...m, open }))}>
         <DialogContent>
