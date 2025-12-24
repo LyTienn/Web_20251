@@ -13,7 +13,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import HeaderBar from "./HeaderBar";
-// THAY ĐỔI 1: Import axios từ config để nhận interceptor và cookie
 import axios from "@/config/Axios-config"; 
 import { useSelector } from "react-redux";
 import { ReviewsSection } from "@/components/Review-section";
@@ -148,7 +147,6 @@ export default function BookSection({ book: bookProp }) {
     }
   }
 
-  // --- PHẦN UI (RETURN JSX) GIỮ NGUYÊN 100% ---
   return (
     <div className="min-h-screen bg-background">
       <HeaderBar />
@@ -259,7 +257,7 @@ export default function BookSection({ book: bookProp }) {
               {book.type === 'FREE' ? (
                 <Badge className="bg-green-400">Miễn phí</Badge>
               ) : (
-                <Badge className='bg-gray-200' variant="secondary">Hội viên</Badge>
+                <Badge className='bg-yellow-300' variant="secondary">Hội viên</Badge>
               )}
             </div>
           </div>
