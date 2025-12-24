@@ -6,6 +6,9 @@ import { store, persistor } from "./redux/Store";
 import { PersistGate } from "redux-persist/integration/react";
 import './index.css';
 import App from './App.jsx';
+import { injectStore } from './config/Axios-config';
+
+injectStore(store);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
