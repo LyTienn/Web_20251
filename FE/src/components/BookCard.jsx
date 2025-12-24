@@ -19,7 +19,7 @@ export default function BookCard({ book, subject }) {
                     className='absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
                     onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/400x600?text=Error"; }}
                 />
-                <Badge className={`absolute bottom-2 right-2 ${book.type === 'FREE' ? 'bg-green-500' : 'bg-yellow-600'}`}>
+                <Badge className={`absolute bottom-2 right-2 ${book.type === 'FREE' ? 'bg-green-400' : 'bg-yellow-300'}`}>
                     {book.type === 'FREE' ? 'Miễn phí' : 'Hội viên'}
                 </Badge>
             </div>
