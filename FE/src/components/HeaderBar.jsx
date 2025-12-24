@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from 'react-toastify';
 
 const HeaderBar = ({ searchData, onSearchResult }) => {
   const dispatch = useDispatch();
@@ -24,6 +25,7 @@ const HeaderBar = ({ searchData, onSearchResult }) => {
 
   const handleLogout = () => {
     dispatch(logoutUser());
+    toast.success('Đăng xuất thành công!');
     navigate('/homepage'); 
   };
 
@@ -50,7 +52,7 @@ const HeaderBar = ({ searchData, onSearchResult }) => {
         isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
       }`}
     >
-      <div className='container mx-auto px-4 h-16 flex items-center justify-between'>
+      <div className='container mx-auto h-16 flex items-center justify-between'>
         <Link to="/" className='flex items-center gap-2 font-semibold text-lg'>
           <BookOpen className='h-6 w-6' />
           <span>Thư Viện Sách</span>
@@ -85,9 +87,14 @@ const HeaderBar = ({ searchData, onSearchResult }) => {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 pl-2 pr-2 hover:bg-gray-200">
-                    <User className="h-4 w-4 mr-2" />
-                    <span className="font-medium">{user?.fullName || "User"}</span>
+                  <Button variant="ghost" size="sm" className="h-8 pl-2 pr-2 hover:bg-gray-200 flex items-center gap-2">
+                    <User className="h-4 w-4 mr-2 shrink-0" />
+                    <span 
+                      className="font-medium max-w-20 sm:max-w-[120px] md:max-w-[150px] truncate"
+                      title={user?.fullName || user?.full_name} // Tooltip hiển thị tên đầy đủ khi hover
+                    >
+                      {user?.fullName || user?.full_name || "User"}
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 

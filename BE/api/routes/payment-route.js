@@ -17,7 +17,7 @@ router.post(
   ],
   PaymentController.createPaymentUrl
 );
-
+router.get("/history", authenticate, PaymentController.getPaymentHistory);
 // VNPay callback
 router.get("/vnpay-return", PaymentController.vnpayReturn);
 // router.get("/vnpay-ipn", PaymentController.vnpayIPN);

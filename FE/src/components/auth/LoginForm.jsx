@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 // import { clearAuthError } from "@/redux/Auth/AuthSlice";
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+
 
 const LoginForm = () => {
     const [email, setEmail] = useState("");
@@ -15,9 +17,8 @@ const LoginForm = () => {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { isAuthenticated, user } = useSelector((state) => state.auth);
 
-    // const { isLoading, isAuthenticated } = useSelector((state) => state.auth);
+    const { isLoading } = useSelector((state) => state.auth);
 
     // useEffect(() => {
     //     if (isAuthenticated) {
@@ -33,26 +34,21 @@ const LoginForm = () => {
             return;
         }
         const res = await dispatch(loginUser({ email, password }));
+
         if(loginUser.fulfilled.match(res)){
+            const role = (res.payload?.role || "").toUpperCase();
             toast.success("Đăng nhập thành công. Chào mừng bạn quay trở lại!");
-            const payload = res.payload || {};
-            const role = (payload.role || user?.role || '').toUpperCase();
-            if (role === 'ADMIN') {
-                navigate('/admin');
+            if (role === "ADMIN") {
+                navigate("/admin");
             } else {
-                navigate('/');
+                navigate("/");
             }
+        } 
+        else if (loginUser.rejected.match(res)) {
+            const errorMessage = res.payload || "Email hoặc mật khẩu không chính xác";
+            toast.error(errorMessage);
         }
     }
-
-    useEffect(() => {
-        if (isAuthenticated) {
-            const role = (user?.role || '').toUpperCase();
-            if (role === 'ADMIN') {
-                navigate('/admin');
-            }
-        }
-    }, [isAuthenticated, user, navigate]);
 
     return (
         <Card className="w-full max-w-md">
@@ -83,8 +79,19 @@ const LoginForm = () => {
                         required
                         />
                     </div>
-                    <Button type="submit" className="w-full hover:shadow-gray-400">
-                        Đăng nhập
+                    <Button 
+                        type="submit" 
+                        className="w-full hover:shadow-gray-400"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Đang xử lý...
+                            </>
+                        ) : (
+                            "Đăng nhập"
+                        )}
                     </Button>
                 </form>
             </CardContent>

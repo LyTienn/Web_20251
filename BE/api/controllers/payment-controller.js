@@ -14,6 +14,67 @@ class PaymentController {
     return sorted;
   }
 
+  static getPackageAmount(packageDetails) {
+    const prices = {
+      "3_THANG": 99000,
+      "6_THANG": 179000,
+      "12_THANG": 299000,
+    };
+    return prices[packageDetails] || 0;
+  }
+
+  static getStatusText(status) {
+    const statusMap = {
+      PENDING: "Đang xử lý",
+      ACTIVE: "Thành công",
+      CANCELLED: "Thanh toán thất bại",
+      EXPIRED: "Đã hết hạn",
+    };
+    return statusMap[status] || "Không xác định";
+  }
+
+  static async getPaymentHistory(req, res) {
+    try {
+      const userId = req.user.userId; // Từ middleware authenticate
+
+      const subscriptions = await Subscription.findAll({
+        where: { user_id: userId },
+        order: [["expiry_date"]],
+        attributes: [
+          "subscription_id",
+          "package_details",
+          "start_date",
+          "expiry_date",
+          "payment_transaction_id",
+          "status",
+        ],
+      });
+
+      // Map sang format dễ đọc hơn
+      const history = subscriptions.map((sub) => ({
+        id: sub.subscription_id,
+        transactionId: sub.payment_transaction_id,
+        package: sub.package_details,
+        amount: PaymentController.getPackageAmount(sub.package_details),
+        status: sub.status,
+        statusText: PaymentController.getStatusText(sub.status),
+        startDate: sub.start_date,
+        expiryDate: sub.expiry_date,
+      }));
+
+      res.status(200).json({
+        success: true,
+        data: { history },
+      });
+    } catch (error) {
+      console.error("Get payment history error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error",
+      });
+    }
+  }
+
   static getVNPayMessage(responseCode) {
     const messages = {
       "00": "Giao dịch thành công",
@@ -109,9 +170,9 @@ class PaymentController {
         vnp_CreateDate: createDate,
       };
 
-    //   if (vnp_IpnUrl) {
-    //     vnp_Params.vnp_IpnUrl = vnp_IpnUrl;
-    //   }
+      //   if (vnp_IpnUrl) {
+      //     vnp_Params.vnp_IpnUrl = vnp_IpnUrl;
+      //   }
 
       vnp_Params = PaymentController.sortObject(vnp_Params);
 
