@@ -15,6 +15,7 @@ const LoginForm = () => {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const { isAuthenticated, user } = useSelector((state) => state.auth);
 
     // const { isLoading, isAuthenticated } = useSelector((state) => state.auth);
 
@@ -34,9 +35,24 @@ const LoginForm = () => {
         const res = await dispatch(loginUser({ email, password }));
         if(loginUser.fulfilled.match(res)){
             toast.success("Đăng nhập thành công. Chào mừng bạn quay trở lại!");
-            navigate("/")
+            const payload = res.payload || {};
+            const role = (payload.role || user?.role || '').toUpperCase();
+            if (role === 'ADMIN') {
+                navigate('/admin');
+            } else {
+                navigate('/');
+            }
         }
     }
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            const role = (user?.role || '').toUpperCase();
+            if (role === 'ADMIN') {
+                navigate('/admin');
+            }
+        }
+    }, [isAuthenticated, user, navigate]);
 
     return (
         <Card className="w-full max-w-md">
