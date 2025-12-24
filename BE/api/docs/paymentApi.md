@@ -187,6 +187,52 @@ hoặc
 ❌ Payment failed: 1705308645000 Code: 24
 ```
 
+### 1.3. Lấy Lịch Sử Giao Dịch
+
+Lấy toàn bộ lịch sử giao dịch thanh toán của user hiện tại.
+
+**Endpoint:** `GET /payment/history`
+
+**Authentication:** Required
+
+**Headers:**
+
+```
+Cookie: accessToken=<token>
+```
+
+**Response Success (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "history": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "transactionId": "1705308645000",
+        "package": "6_THANG",
+        "amount": 179000,
+        "status": "ACTIVE",
+        "statusText": "Thành công",
+        "startDate": "2024-01-15T10:30:45.000Z",
+        "expiryDate": "2024-07-15T10:30:45.000Z"
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440001",
+        "transactionId": "1702716645000",
+        "package": "3_THANG",
+        "amount": 99000,
+        "status": "CANCELLED",
+        "statusText": "Thanh toán thất bại",
+        "startDate": "2023-12-16T08:10:45.000Z",
+        "expiryDate": "2024-03-16T08:10:45.000Z"
+      }
+    ]
+  }
+}
+```
+
 ---
 
 ## 2. DATABASE SCHEMA
