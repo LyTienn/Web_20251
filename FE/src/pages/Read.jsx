@@ -19,6 +19,7 @@ export default function ReadBookPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [initialScrollPos, setInitialScrollPos] = useState(0);
   const isRestoring = useRef(false);
+  const hasMarkedCompleted = useRef(false);
 
   const contentRef = useRef(null);
 
@@ -155,7 +156,6 @@ export default function ReadBookPage() {
           if (targetPixel > 0) {
             element.scrollTo({ top: targetPixel, behavior: 'auto' });
             if (Math.abs(element.scrollTop - targetPixel) < 20) {
-              setInitialScrollPos(0);
               setTimeout(() => { isRestoring.current = false; }, 500);
               } else if (attempts < maxAttempts) {
                 attempts++;
@@ -174,16 +174,34 @@ export default function ReadBookPage() {
     }
   }, [selectedChapter?.id, selectedChapter?.content, initialScrollPos]);
 
+  const markBookAsCompleted = async () => {
+    if (hasMarkedCompleted.current) return;
+    hasMarkedCompleted.current = true;
+    saveProgress.cancel(); 
+    try {
+      await axios.delete(`/bookshelf/books/${bookId}?status=READING`);
+      return;
+    } catch (error) {
+      console.error("Lỗi xóa sách:", error);
+      hasMarkedCompleted.current = false;
+    }
+  };
 
-  // B. Sự kiện cuộn (Đã thêm chặn khi đang restore)
   const handleScroll = (e) => {
-    if (isRestoring.current) return; 
+    if (isRestoring.current || hasMarkedCompleted.current) return; 
     if (!isAuthenticated || !selectedChapter) return;    
     const target = e.target;
     const { scrollTop, scrollHeight, clientHeight } = target;    
     if (scrollHeight - clientHeight <= 0) return;
     const scrolledPercent = (scrollTop / (scrollHeight - clientHeight)) * 100;  
-    saveProgress(bookId, selectedChapter.id, scrolledPercent);
+    const currentIndex = getCurrentChapterIndex();
+    const isLastChapter = currentIndex === chapters.length - 1;
+
+    if (isLastChapter && scrolledPercent > 95) {
+      markBookAsCompleted();
+    } else {
+      saveProgress(bookId, selectedChapter.id, scrolledPercent);
+    }
   };
 
   const getCurrentChapterIndex = () => {
@@ -191,14 +209,25 @@ export default function ReadBookPage() {
     return chapters.findIndex(ch => ch.id === selectedChapter.id);
   };
 
+  const handleSelectChapter = (ch) => {
+    setInitialScrollPos(0); // Reset về 0
+    setSelectedChapter(ch);
+  };
+
   const handlePrevChapter = () => {
     const idx = getCurrentChapterIndex();
-    if (idx > 0) setSelectedChapter(chapters[idx - 1]);
+    if (idx > 0) {
+      setInitialScrollPos(0); // Reset về 0
+      setSelectedChapter(chapters[idx - 1]);
+    }
   };
 
   const handleNextChapter = () => {
     const idx = getCurrentChapterIndex();
-    if (idx >= 0 && idx < chapters.length - 1) setSelectedChapter(chapters[idx + 1]);
+    if (idx >= 0 && idx < chapters.length - 1) {
+      setInitialScrollPos(0); // Reset về 0
+      setSelectedChapter(chapters[idx + 1]);
+    }
   };
 
   if (!book) return <div className="min-h-screen bg-background"><Header /><div className="container mx-auto p-4">Đang tải...</div></div>;
