@@ -259,7 +259,7 @@ export default function BookSection({ book: bookProp }) {
               {book.type === 'FREE' ? (
                 <Badge className="bg-green-400">Miễn phí</Badge>
               ) : (
-                <Badge className='bg-gray-200' variant="secondary">Hội viên</Badge>
+                <Badge className='bg-yellow-300' variant="secondary">Hội viên</Badge>
               )}
             </div>
           </div>

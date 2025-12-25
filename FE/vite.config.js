@@ -5,6 +5,11 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    allowedHosts: [
+      'proconsultation-coordinately-merlin.ngrok-free.dev'
+    ]
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

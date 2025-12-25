@@ -2,6 +2,7 @@ import Book from "../models/book-model.js";
 import Subject from "../models/subject-model.js";
 import Author from "../models/author-model.js";
 import BookSubject from "../models/book_subject-model.js";
+import BookShelf from "../models/bookshelf-model.js";
 import { Op } from "sequelize";
 
 // Thiết lập association nếu chưa có
@@ -29,6 +30,15 @@ export const getAllBooks = async (req, res) => {
       where.author_id = authorId;
     }
 
+    if (keyword) {
+      where = {
+        ...where,
+        [Op.or]: [
+          { title: { [Op.iLike]: `%${keyword}%` } }
+        ]
+      };
+    }
+
     let include = [
       {
         model: Author,
@@ -41,6 +51,12 @@ export const getAllBooks = async (req, res) => {
         attributes: ["name"],
         through: { attributes: [] },
       },
+      {
+        model: BookShelf,
+        attributes: ["id", "name"],
+        through: { attributes: [] },
+        as: "bookshelves"
+      }
     ];
 
     if (subjectId) {
@@ -99,6 +115,12 @@ export const getBookById = async (req, res) => {
           attributes: ["name"],
           through: { attributes: [] },
         },
+        {
+          model: BookShelf,
+          attributes: ["id", "name"],
+          through: { attributes: [] },
+          as: "bookshelves"
+        }
       ],
     });
     if (!book) {
