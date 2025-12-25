@@ -17,9 +17,12 @@ const HomePage = () => {
     const fetchBooks = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('/books');
+        const response = await axios.get('/books', { params: { limit: 20 } });
         if (response.success && response.data) {
-          const normalizedData = response.data.map(book => ({
+          // Handle paginated response structure or legacy array
+          const booksSource = response.data.books || (Array.isArray(response.data) ? response.data : []);
+
+          const normalizedData = booksSource.map(book => ({
             ...book,
             imageUrl: book.imageUrl || book.image_url || 'https://placehold.co/150x220?text=No+Image',
             author: typeof book.author === 'object' ? book.author?.name : book.author
@@ -52,7 +55,7 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <HeaderBar searchData={allBooks} onSearchResult={handleSearchResult}/>
+      <HeaderBar searchData={allBooks} onSearchResult={handleSearchResult} />
       {/* Banner tràn viền */}
       <div className="relative w-full">
         <Swiper

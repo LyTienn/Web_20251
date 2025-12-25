@@ -38,6 +38,15 @@ const Comment = sequelize.define(
       defaultValue: DataTypes.NOW,
       field: "created_at",
     },
+    status: {
+      type: DataTypes.ENUM("PENDING", "APPROVED", "REJECTED"),
+      allowNull: false,
+      defaultValue: "PENDING",
+    },
+    is_deleted: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "comments",

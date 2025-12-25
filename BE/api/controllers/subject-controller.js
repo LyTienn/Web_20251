@@ -1,12 +1,35 @@
 import Subject from "../models/subject-model.js";
 import BookSubject from "../models/book_subject-model.js";
 import Book from "../models/book-model.js";
+import { Op } from "sequelize";
 
 // Lấy toàn bộ chủ đề
 export const getAllSubjects = async (req, res) => {
   try {
-    const subjects = await Subject.findAll({ order: [['name', 'ASC']] });
-    res.json({ success: true, data: subjects });
+    const { page = 1, limit = 10, q } = req.query;
+    const offset = (page - 1) * limit;
+
+    let where = { is_deleted: 0 }; // Soft filter
+    if (q) {
+      where.name = { [Op.iLike]: `%${q}%` };
+    }
+
+    const { count, rows } = await Subject.findAndCountAll({
+      where,
+      order: [['name', 'ASC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    res.json({
+      success: true,
+      data: {
+        total: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: parseInt(page),
+        subjects: rows
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: "Lỗi lấy danh sách chủ đề", error: error.message });
   }
@@ -15,7 +38,7 @@ export const getAllSubjects = async (req, res) => {
 // Lấy chi tiết một chủ đề theo id
 export const getSubjectById = async (req, res) => {
   try {
-    const subject = await Subject.findByPk(req.params.id);
+    const subject = await Subject.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!subject) {
       return res.status(404).json({ success: false, message: "Không tìm thấy chủ đề" });
     }
@@ -30,7 +53,7 @@ export const getBooksBySubject = async (req, res) => {
   try {
     const bookSubjects = await BookSubject.findAll({ where: { subject_id: req.params.id } });
     const bookIds = bookSubjects.map(bs => bs.book_id);
-    const books = await Book.findAll({ where: { id: bookIds } });
+    const books = await Book.findAll({ where: { id: bookIds, is_deleted: 0 } });
     res.json({ success: true, data: books });
   } catch (error) {
     res.status(500).json({ success: false, message: "Lỗi lấy danh sách sách theo chủ đề", error: error.message });
@@ -65,17 +88,19 @@ export const updateSubject = async (req, res) => {
     res.status(500).json({ success: false, message: "Lỗi cập nhật chủ đề", error: error.message });
   }
 };
-
 // Xóa chủ đề
 export const deleteSubject = async (req, res) => {
   try {
-    const subject = await Subject.findByPk(req.params.id);
+    const subject = await Subject.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!subject) {
       return res.status(404).json({ success: false, message: "Không tìm thấy chủ đề" });
     }
-    // Xóa các liên kết trong bảng book_subjects trước
-    await BookSubject.destroy({ where: { subject_id: req.params.id } });
-    await subject.destroy();
+    // Xóa các liên kết trong bảng book_subjects trước (optional based on logic)
+    // await BookSubject.destroy({ where: { subject_id: req.params.id } }); // Commented out for soft delete
+
+    // Soft Delete
+    await subject.update({ is_deleted: 1 });
+
     res.json({ success: true, message: "Xóa chủ đề thành công" });
   } catch (error) {
     res.status(500).json({ success: false, message: "Lỗi xóa chủ đề", error: error.message });

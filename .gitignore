@@ -1,0 +1,5 @@
+# Repo-level ignores
+# Skip root RUN_GUIDE from commits per request
+RUN_GUIDE.md
+RUNNING.md
+BE/scripts/

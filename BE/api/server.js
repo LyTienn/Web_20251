@@ -10,18 +10,29 @@ import bookRoutes from "./routes/book-route.js";
 import subjectRoutes from "./routes/subject-route.js";
 import authorRoutes from "./routes/author-route.js";
 import commentRoutes from "./routes/comment-route.js";
-import bookshelfRoutes from "./routes/bookshelf-route.js";
+import bookshelfRoutes, { bookshelfAdminRouter } from "./routes/bookshelf-route.js";
 import paymentRoute from "./routes/payment-route.js";
+import statsRoutes from "./routes/stats-route.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const DB_SYNC = process.env.DB_SYNC || "alter"; // options: 'alter' | 'force' | 'none'
 
 // Middleware
+// Allow FE dev servers on ports 5173 and 5174
+const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Allow non-browser requests or same-origin
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
@@ -37,6 +48,8 @@ app.use("/api/subjects", subjectRoutes);
 app.use("/api/authors", authorRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/bookshelf", bookshelfRoutes);
+app.use("/api/admin/bookshelf", bookshelfAdminRouter);
+app.use("/api/admin/stats", statsRoutes);
 app.use("/api/payment", paymentRoute);
 
 app.get("/api/health", async (req, res) => {
@@ -101,6 +114,17 @@ const startServer = async () => {
   try {
     await sequelize.authenticate();
     console.log("Database connection established successfully.");
+
+    // Sync models to database (create/update tables)
+    if (DB_SYNC !== "none") {
+      const syncOptions = DB_SYNC === "force" ? { force: true } : { alter: true };
+      await sequelize.sync(syncOptions);
+      console.log(
+        `Sequelize sync completed with option: ${DB_SYNC} (${JSON.stringify(syncOptions)})`
+      );
+    } else {
+      console.log("Sequelize sync skipped (DB_SYNC=none).");
+    }
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

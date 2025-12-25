@@ -13,11 +13,18 @@ if (!Book.associations.Subjects) {
   Book.belongsToMany(Subject, { through: BookSubject, foreignKey: "book_id", otherKey: "subject_id" });
 }
 
-// Lấy toàn bộ sách
+
+
+// Lấy toàn bộ sách (có phân trang)
 export const getAllBooks = async (req, res) => {
   try {
-    const { subjectId, authorId, keyword } = req.query;
-    let where = {};
+    const { subjectId, authorId, page = 1, limit = 10, q } = req.query;
+    let where = { is_deleted: 0 }; // Soft filter
+    const offset = (page - 1) * limit;
+
+    if (q) {
+      where.title = { [Op.iLike]: `%${q}%` };
+    }
 
     if (authorId) {
       where.author_id = authorId;
@@ -35,10 +42,12 @@ export const getAllBooks = async (req, res) => {
     let include = [
       {
         model: Author,
+        as: "author",
         attributes: ["name"],
       },
       {
         model: Subject,
+        as: "subjects",
         attributes: ["name"],
         through: { attributes: [] },
       },
@@ -55,13 +64,37 @@ export const getAllBooks = async (req, res) => {
       const bookSubjects = await BookSubject.findAll({ where: { subject_id: subjectId } });
       const bookIds = bookSubjects.map(bs => bs.book_id);
       if (bookIds.length === 0) {
-        return res.json({ success: true, data: [] });
+        return res.json({
+          success: true,
+          data: {
+            total: 0,
+            totalPages: 0,
+            currentPage: parseInt(page),
+            books: []
+          }
+        });
       }
       where.id = bookIds;
     }
 
-    const books = await Book.findAll({ where, include });
-    res.json({ success: true, data: books });
+    const { count, rows } = await Book.findAndCountAll({
+      where,
+      include,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      distinct: true, // Important for include to count correctly
+      order: [['created_at', 'DESC']] // Default sort
+    });
+
+    res.json({
+      success: true,
+      data: {
+        total: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: parseInt(page),
+        books: rows
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: "Lỗi lấy danh sách sách", error: error.message });
   }
@@ -70,7 +103,8 @@ export const getAllBooks = async (req, res) => {
 // Lấy chi tiết một sách theo id
 export const getBookById = async (req, res) => {
   try {
-    const book = await Book.findByPk(req.params.id, {
+    const book = await Book.findOne({
+      where: { id: req.params.id, is_deleted: 0 },
       include: [
         {
           model: Author,
@@ -181,16 +215,31 @@ export const getBooksByAuthor = async (req, res) => {
 // Tạo sách mới
 export const createBook = async (req, res) => {
   try {
-    const { title, author_id, description, published_year } = req.body;
+    const { title, author_id, summary, published_year, type, language, page_count, image_url, subjectIds } = req.body;
     if (!title || !author_id) {
       return res.status(400).json({ success: false, message: "Thiếu tiêu đề hoặc tác giả" });
     }
-    const book = await Book.create({ title, author_id, description, published_year });
+    const book = await Book.create({
+      title,
+      author_id,
+      summary,
+      published_year,
+      type: type || 'FREE',
+      language,
+      page_count,
+      image_url
+    });
+
+    // Add subjects if provided
+    if (subjectIds && Array.isArray(subjectIds)) {
+      await book.setSubjects(subjectIds);
+    }
+
     // Lấy lại sách vừa tạo kèm tác giả và chủ đề
     const bookWithDetails = await Book.findByPk(book.id, {
       include: [
-        { model: Author, attributes: ["name"] },
-        { model: Subject, attributes: ["name"], through: { attributes: [] } },
+        { model: Author, as: "author", attributes: ["name"] },
+        { model: Subject, as: "subjects", attributes: ["name"], through: { attributes: [] } },
       ],
     });
     res.status(201).json({ success: true, data: bookWithDetails, message: "Tạo sách thành công" });
@@ -202,18 +251,55 @@ export const createBook = async (req, res) => {
 // Xóa sách
 export const deleteBook = async (req, res) => {
   try {
-    const book = await Book.findByPk(req.params.id, {
-      include: [
-        { model: Author, attributes: ["name"] },
-        { model: Subject, attributes: ["name"], through: { attributes: [] } },
-      ],
-    });
+    const book = await Book.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!book) {
       return res.status(404).json({ success: false, message: "Không tìm thấy sách" });
     }
-    await book.destroy();
-    res.json({ success: true, message: "Xóa sách thành công", data: book });
+    // Soft Delete
+    await book.update({ is_deleted: 1 });
+
+    // Note: Associations (BookSubject) can be kept or soft deleted too. 
+    // Usually keep them to allow restore, unless hard cleanup is needed.
+    // await BookSubject.destroy({ where: { book_id: req.params.id } }); // Commented out to preserve relations for restore
+
+    res.json({ success: true, message: "Xóa sách thành công" });
   } catch (error) {
     res.status(500).json({ success: false, message: "Lỗi xóa sách", error: error.message });
+  }
+};
+
+// Cập nhật sách
+export const updateBook = async (req, res) => {
+  try {
+    const { title, author_id, summary, image_url, type, language, page_count, published_year, subjectIds } = req.body;
+    const book = await Book.findByPk(req.params.id);
+    if (!book) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy sách" });
+    }
+    await book.update({
+      title,
+      author_id,
+      summary,
+      image_url,
+      type,
+      language,
+      page_count,
+      published_year
+    });
+
+    // Update subjects if provided
+    if (subjectIds && Array.isArray(subjectIds)) {
+      await book.setSubjects(subjectIds);
+    }
+
+    const bookWithDetails = await Book.findByPk(book.id, {
+      include: [
+        { model: Author, as: "author", attributes: ["name"] },
+        { model: Subject, as: "subjects", attributes: ["name"], through: { attributes: [] } },
+      ],
+    });
+    res.json({ success: true, data: bookWithDetails, message: "Cập nhật sách thành công" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Lỗi cập nhật sách", error: error.message });
   }
 };

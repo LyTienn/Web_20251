@@ -7,7 +7,19 @@ export default {
     './pages/*.{js,jsx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        display: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      colors: {
+        primary: {
+          DEFAULT: '#137fec',
+        },
+        card: {
+          dark: '#1C252E',
+        },
+      },
+    },
   },
   plugins: [],
 }

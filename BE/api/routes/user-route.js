@@ -48,6 +48,17 @@ router.get(
   UserController.getAllUsers
 );
 
+router.post(
+  "/",
+  authenticate,
+  authorizeRoles("ADMIN"),
+  [
+    body("email").isEmail().withMessage("Invalid email"),
+    body("password").isLength({ min: 6 }).withMessage("Password min 6 chars"),
+  ],
+  UserController.createUser
+);
+
 router.get(
   "/search",
   authenticate,
@@ -60,6 +71,13 @@ router.get(
   authenticate,
   authorizeRoles("ADMIN"),
   UserController.getUserById
+);
+
+router.put(
+  "/:userId",
+  authenticate,
+  authorizeRoles("ADMIN"),
+  UserController.updateUser
 );
 
 router.delete(

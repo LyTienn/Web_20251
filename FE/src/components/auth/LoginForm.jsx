@@ -35,8 +35,13 @@ const LoginForm = () => {
         const res = await dispatch(loginUser({ email, password }));
 
         if(loginUser.fulfilled.match(res)){
+            const role = (res.payload?.role || "").toUpperCase();
             toast.success("Đăng nhập thành công. Chào mừng bạn quay trở lại!");
-            navigate("/");
+            if (role === "ADMIN") {
+                navigate("/admin");
+            } else {
+                navigate("/");
+            }
         } 
         else if (loginUser.rejected.match(res)) {
             const errorMessage = res.payload || "Email hoặc mật khẩu không chính xác";

@@ -54,6 +54,12 @@ const User = sequelize.define(
       defaultValue: DataTypes.NOW,
       field: "created_at",
     },
+    is_deleted: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      field: "is_deleted",
+    },
   },
   {
     tableName: "users",
@@ -70,7 +76,7 @@ User.prototype.toJSON = function () {
 };
 
 class UserModel {
-  static async create({ email, password, fullName, role = "USER" }) {
+  static async create({ email, password, fullName, role = "USER", tier = "FREE" }) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     const user = await User.create({
@@ -78,6 +84,7 @@ class UserModel {
       password_hash: passwordHash,
       full_name: fullName,
       role,
+      tier,
     });
 
     return {
@@ -91,14 +98,15 @@ class UserModel {
 
   static async findByEmail(email) {
     return await User.findOne({
-      where: { email },
+      where: { email, is_deleted: 0 },
       raw: true,
     });
   }
 
   static async findById(userId) {
-    return await User.findByPk(userId, {
-      attributes: ["user_id", "email", "full_name", "role", "created_at"],
+    return await User.findOne({
+      where: { user_id: userId, is_deleted: 0 },
+      attributes: ["user_id", "email", "full_name", "role", "tier", "created_at"],
       raw: true,
     });
   }
@@ -181,29 +189,40 @@ class UserModel {
   }
 
   static async delete(userId) {
-    const user = await User.findByPk(userId);
+    const user = await User.findOne({ where: { user_id: userId, is_deleted: 0 } });
     if (!user) {
       return false;
     }
-    await user.destroy();
+    user.is_deleted = 1;
+    await user.save();
     return true;
   }
 
   static async count(conditions = {}) {
-    return await User.count({ where: conditions });
+    return await User.count({ where: { ...conditions, is_deleted: 0 } });
   }
 
-  static async findAll({ page = 1, limit = 10, role = null }) {
+  static async findAll({ page = 1, limit = 10, role = null, tier = null, q = null }) {
     const offset = (page - 1) * limit;
-    const where = {};
+    const { Op } = await import("sequelize");
+    const where = { is_deleted: 0 };
 
     if (role) {
       where.role = role;
     }
+    if (tier) {
+      where.tier = tier;
+    }
+    if (q) {
+      where[Op.or] = [
+        { email: { [Op.iLike]: `%${q}%` } },
+        { full_name: { [Op.iLike]: `%${q}%` } },
+      ];
+    }
 
     const { count, rows } = await User.findAndCountAll({
       where,
-      attributes: ["user_id", "email", "full_name", "role", "created_at"],
+      attributes: ["user_id", "email", "full_name", "role", "tier", "created_at"],
       limit,
       offset,
       order: [["created_at", "DESC"]],
@@ -223,12 +242,13 @@ class UserModel {
 
     return await User.findAll({
       where: {
+        is_deleted: 0,
         [Op.or]: [
           { email: { [Op.iLike]: `%${searchTerm}%` } },
           { full_name: { [Op.iLike]: `%${searchTerm}%` } },
         ],
       },
-      attributes: ["user_id", "email", "full_name", "role", "created_at"],
+      attributes: ["user_id", "email", "full_name", "role", "tier", "created_at"],
       limit: 10,
     });
   }

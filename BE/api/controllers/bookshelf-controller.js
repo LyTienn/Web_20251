@@ -130,6 +130,134 @@ class BookshelfController {
     }
   }
 
+  // Admin: Lấy bookshelf theo userId (favorites + reading)
+  static async getBookshelfByUserId(req, res) {
+    try {
+      const { userId } = req.params;
+      const { status } = req.query; // optional filter
+
+      const where = { user_id: userId };
+      if (status && ["FAVORITE", "READING"].includes(status)) {
+        where.status = status;
+      }
+
+      const bookshelfItems = await UserBookshelf.findAll({
+        where,
+        include: [
+          {
+            model: Book,
+            as: "book",
+            attributes: ["id", "title", "image_url", "summary", "type"],
+            include: [
+              {
+                model: Author,
+                as: "author",
+                attributes: ["name"],
+              },
+              {
+                model: Subject,
+                as: "subjects",
+                attributes: ["name"],
+                through: { attributes: [] },
+              },
+            ],
+          },
+        ],
+        order: [["added_at", "DESC"]],
+      });
+
+      const grouped = {
+        FAVORITE: [],
+        READING: [],
+      };
+
+      bookshelfItems.forEach((item) => {
+        grouped[item.status].push({
+          ...item.book.toJSON(),
+          addedAt: item.added_at,
+        });
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          favorites: grouped.FAVORITE,
+          reading: grouped.READING,
+          total: bookshelfItems.length,
+        },
+      });
+    } catch (error) {
+      console.error("Admin get user bookshelf error:", error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+
+  // Admin: Thêm sách vào bookshelf của user
+  static async adminAddToBookshelf(req, res) {
+    try {
+      const { userId, bookId } = req.params;
+      const { status } = req.body; // 'FAVORITE' hoặc 'READING'
+
+      if (!["FAVORITE", "READING"].includes(status)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Status must be either FAVORITE or READING" });
+      }
+
+      const book = await Book.findByPk(bookId);
+      if (!book) {
+        return res.status(404).json({ success: false, message: "Book not found" });
+      }
+
+      const existing = await UserBookshelf.findOne({
+        where: { user_id: userId, book_id: bookId, status },
+      });
+      if (existing) {
+        return res
+          .status(409)
+          .json({ success: false, message: `Book already in ${status.toLowerCase()} list` });
+      }
+
+      await UserBookshelf.create({ user_id: userId, book_id: bookId, status });
+
+      res
+        .status(201)
+        .json({ success: true, message: `Book added to ${status.toLowerCase()} successfully` });
+    } catch (error) {
+      console.error("Admin add to bookshelf error:", error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+
+  // Admin: Xóa sách khỏi bookshelf của user
+  static async adminRemoveFromBookshelf(req, res) {
+    try {
+      const { userId, bookId } = req.params;
+      const { status } = req.query; // 'FAVORITE' hoặc 'READING'
+
+      if (!status || !["FAVORITE", "READING"].includes(status)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Status query parameter is required (FAVORITE or READING)" });
+      }
+
+      const deleted = await UserBookshelf.destroy({
+        where: { user_id: userId, book_id: bookId, status },
+      });
+
+      if (deleted === 0) {
+        return res.status(404).json({ success: false, message: "Book not found in bookshelf" });
+      }
+
+      res
+        .status(200)
+        .json({ success: true, message: `Book removed from ${status.toLowerCase()} successfully` });
+    } catch (error) {
+      console.error("Admin remove from bookshelf error:", error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+
   // Xóa sách khỏi bookshelf
   static async removeFromBookshelf(req, res) {
     try {

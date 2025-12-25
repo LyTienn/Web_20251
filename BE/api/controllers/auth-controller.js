@@ -100,6 +100,7 @@ class AuthController {
         password,
         user.password_hash
       );
+
       if (!isPasswordValid) {
         return res.status(401).json({
           success: false,

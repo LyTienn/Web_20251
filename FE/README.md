@@ -14,3 +14,18 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Admin Interface
+
+An Admin UI has been added using Tailwind and Material Symbols. Access it at:
+
+- `/admin` → Dashboard
+- `/admin/books`, `/admin/authors`, `/admin/subjects`, `/admin/bookshelves`
+- `/admin/users`, `/admin/registrations`, `/admin/comments`, `/admin/settings`
+
+Files:
+
+- Layout: `src/components/admin/AdminLayout.jsx`
+- Pages: `src/pages/admin/*`
+
+Icons and fonts are loaded via links in `index.html`.

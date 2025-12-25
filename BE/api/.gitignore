@@ -9,3 +9,10 @@ logs/
 *.log
 /dist
 /build
+# Temporary scripts
+add_*.js
+verify_*.js
+update_*.js
+tmp/
+temp/
+scripts/

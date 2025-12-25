@@ -75,7 +75,7 @@ class CommentController {
       const offset = (page - 1) * limit;
 
       const { count, rows } = await Comment.findAndCountAll({
-        where: { book_id: bookId },
+        where: { book_id: bookId, is_deleted: 0 },
         include: [
           {
             model: User,
@@ -90,14 +90,14 @@ class CommentController {
 
       // Tính average rating
       const allComments = await Comment.findAll({
-        where: { book_id: bookId },
+        where: { book_id: bookId, is_deleted: 0 },
         attributes: ["rating"],
       });
 
       const averageRating =
         allComments.length > 0
           ? allComments.reduce((sum, c) => sum + c.rating, 0) /
-            allComments.length
+          allComments.length
           : 0;
 
       res.status(200).json({
@@ -130,7 +130,7 @@ class CommentController {
       const { content, rating } = req.body;
       const userId = req.user.userId;
 
-      const comment = await Comment.findByPk(commentId);
+      const comment = await Comment.findOne({ where: { comment_id: commentId, is_deleted: 0 } });
 
       if (!comment) {
         return res.status(404).json({
@@ -192,7 +192,7 @@ class CommentController {
       const userId = req.user.userId;
       const userRole = req.user.role;
 
-      const comment = await Comment.findByPk(commentId);
+      const comment = await Comment.findOne({ where: { comment_id: commentId, is_deleted: 0 } });
 
       if (!comment) {
         return res.status(404).json({
@@ -209,7 +209,9 @@ class CommentController {
         });
       }
 
-      await comment.destroy();
+      // Soft Delete
+      comment.is_deleted = 1;
+      await comment.save();
 
       res.status(200).json({
         success: true,
@@ -217,6 +219,60 @@ class CommentController {
       });
     } catch (error) {
       console.error("Delete comment error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error",
+      });
+    }
+  }
+
+  // Admin: Lấy tất cả comments (có phân trang, filter)
+  static async getAllComments(req, res) {
+    try {
+      const { page = 1, limit = 10, rating, bookId, userId } = req.query;
+      const offset = (page - 1) * limit;
+
+      const where = { is_deleted: 0 };
+      if (rating) where.rating = rating;
+      if (bookId) where.book_id = bookId;
+      if (userId) where.user_id = userId;
+
+      // New filter for status
+      if (req.query.status) where.status = req.query.status;
+
+      const { count, rows } = await Comment.findAndCountAll({
+        where,
+        include: [
+          {
+            model: User,
+            as: "user",
+            attributes: ["user_id", "full_name", "email"],
+          },
+          {
+            model: Book,
+            as: "book",
+            attributes: ["id", "title"],
+          },
+        ],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [["created_at", "DESC"]],
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          comments: rows,
+          pagination: {
+            total: count,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: Math.ceil(count / limit),
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Get all comments error:", error);
       res.status(500).json({
         success: false,
         message: "Server error",
@@ -233,7 +289,7 @@ class CommentController {
       const offset = (page - 1) * limit;
 
       const { count, rows } = await Comment.findAndCountAll({
-        where: { user_id: userId },
+        where: { user_id: userId, is_deleted: 0 },
         include: [
           {
             model: Book,
@@ -264,6 +320,46 @@ class CommentController {
         success: false,
         message: "Server error",
       });
+    }
+  }
+
+  // Duyệt comment (Admin)
+  static async approveComment(req, res) {
+    try {
+      const { commentId } = req.params;
+      const comment = await Comment.findByPk(commentId);
+
+      if (!comment) {
+        return res.status(404).json({ success: false, message: "Comment not found" });
+      }
+
+      comment.status = "APPROVED";
+      await comment.save();
+
+      res.json({ success: true, message: "Comment approved", data: comment });
+    } catch (error) {
+      console.error("Approve comment error:", error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+
+  // Từ chối comment (Admin)
+  static async rejectComment(req, res) {
+    try {
+      const { commentId } = req.params;
+      const comment = await Comment.findByPk(commentId);
+
+      if (!comment) {
+        return res.status(404).json({ success: false, message: "Comment not found" });
+      }
+
+      comment.status = "REJECTED";
+      await comment.save();
+
+      res.json({ success: true, message: "Comment rejected", data: comment });
+    } catch (error) {
+      console.error("Reject comment error:", error);
+      res.status(500).json({ success: false, message: "Server error" });
     }
   }
 }

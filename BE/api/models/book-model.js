@@ -13,6 +13,7 @@ const Book = sequelize.define("books", {
   txt_url: { type: DataTypes.TEXT },
   created_at: { type: DataTypes.DATE },
   type: { type: DataTypes.ENUM('FREE', 'PREMIUM'), allowNull: false, defaultValue: 'FREE' },
+  is_deleted: { type: DataTypes.INTEGER, defaultValue: 0 },
 }, {
   timestamps: false
 });
