@@ -7,14 +7,18 @@ import {
   deleteAuthor,
   getBooksByAuthor
 } from "../controllers/author-controller.js";
+import { authenticate, authorizeRoles } from "../middlewares/auth-middleware.js";
 
 const router = express.Router();
 
+// Public routes
 router.get("/", getAllAuthors);
 router.get("/:id", getAuthorById);
 router.get("/:id/books", getBooksByAuthor);
-router.post("/", createAuthor);
-router.put("/:id", updateAuthor);
-router.delete("/:id", deleteAuthor);
+
+// Admin routes
+router.post("/", authenticate, authorizeRoles("ADMIN"), createAuthor);
+router.put("/:id", authenticate, authorizeRoles("ADMIN"), updateAuthor);
+router.delete("/:id", authenticate, authorizeRoles("ADMIN"), deleteAuthor);
 
 export default router;

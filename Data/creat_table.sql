@@ -66,8 +66,19 @@ CREATE TABLE IF NOT EXISTS users (
   tier user_tier_enum DEFAULT 'FREE',
   refresh_token TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  is_deleted INTEGER NOT NULL DEFAULT 0,
   CONSTRAINT users_email_key UNIQUE (email)
 );
+
+-- Add is_deleted column if not exists (for migration)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'is_deleted'
+  ) THEN
+    ALTER TABLE users ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0;
+  END IF;
+END $$;
 
 -- books
 CREATE TABLE IF NOT EXISTS books (

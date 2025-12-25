@@ -39,10 +39,21 @@ export default function ListSection({ books = [], onSelectBook }) {
         }
       });
     });
-    return Object.keys(groupedData).map(key => ({
+
+    const categoryList = Object.keys(groupedData).map(key => ({
       categoryTitle: key,
       books: groupedData[key]
     }));
+
+    // Add 'Sách mới' (New Books) at the beginning containing first 10 books
+    if (books.length > 0) {
+      categoryList.unshift({
+        categoryTitle: 'Sách mới cập nhật',
+        books: books.slice(0, 10)
+      });
+    }
+
+    return categoryList;
   };
 
   const categories = getCategorizedBooks();

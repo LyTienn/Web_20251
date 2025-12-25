@@ -1,9 +1,17 @@
 import express from "express";
 import CommentController from "../controllers/comment-controller.js";
-import { authenticate } from "../middlewares/auth-middleware.js";
+import { authenticate, authorizeRoles } from "../middlewares/auth-middleware.js";
 import { body } from "express-validator";
 
 const router = express.Router();
+
+// Admin: Lấy tất cả comments
+router.get(
+  "/",
+  authenticate,
+  authorizeRoles("ADMIN"),
+  CommentController.getAllComments
+);
 
 // Tạo comment cho sách
 router.post(
@@ -43,6 +51,22 @@ router.delete(
   "/:commentId",
   authenticate,
   CommentController.deleteComment
+);
+
+// Duyệt comment
+router.patch(
+  "/:commentId/approve",
+  authenticate,
+  authorizeRoles("ADMIN"),
+  CommentController.approveComment
+);
+
+// Từ chối comment
+router.patch(
+  "/:commentId/reject",
+  authenticate,
+  authorizeRoles("ADMIN"),
+  CommentController.rejectComment
 );
 
 export default router;

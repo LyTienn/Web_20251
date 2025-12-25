@@ -1,15 +1,17 @@
 import { Router } from "express";
-import { getAllBooks, getBookById, getBookChapters } from "../controllers/book-controller.js";
+import { getAllBooks, getBookById, getBookChapters, createBook, updateBook, deleteBook } from "../controllers/book-controller.js";
+import { authenticate, authorizeRoles } from "../middlewares/auth-middleware.js";
 
 const router = Router();
 
-// GET /books - lấy toàn bộ sách
-
-// GET /books - lấy toàn bộ sách
+// Public routes
 router.get("/", getAllBooks);
-// GET /books/:id - lấy chi tiết sách
 router.get("/:id", getBookById);
-// GET /books/:id/chapters - lấy danh sách chương của sách
 router.get("/:id/chapters", getBookChapters);
+
+// Admin routes
+router.post("/", authenticate, authorizeRoles("ADMIN"), createBook);
+router.put("/:id", authenticate, authorizeRoles("ADMIN"), updateBook);
+router.delete("/:id", authenticate, authorizeRoles("ADMIN"), deleteBook);
 
 export default router;

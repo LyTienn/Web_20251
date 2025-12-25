@@ -205,12 +205,14 @@ class UserController {
   // Admin: Lấy danh sách users
   static async getAllUsers(req, res) {
     try {
-      const { page = 1, limit = 10, role } = req.query;
+      const { page = 1, limit = 10, role, tier, q } = req.query;
 
       const result = await UserModel.findAll({
         page: parseInt(page),
         limit: parseInt(limit),
         role,
+        tier,
+        q
       });
 
       res.status(200).json({
@@ -308,6 +310,100 @@ class UserController {
       });
     } catch (error) {
       console.error("Delete user error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error",
+      });
+    }
+  }
+
+  // Admin: Cập nhật user (role, tier)
+  static async updateUser(req, res) {
+    try {
+      const { userId } = req.params;
+      const { role, tier, fullName } = req.body;
+
+      // Không cho phép admin tự hạ quyền chính mình
+      if (userId === req.user.userId && role && role !== "ADMIN") {
+        return res.status(403).json({
+          success: false,
+          message: "You cannot demote your own account",
+        });
+      }
+
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      // Import User sequelize model to do raw update
+      const { User } = await import("../models/user-model.js");
+      const userInstance = await User.findByPk(userId);
+
+      if (role && ["USER", "ADMIN"].includes(role)) {
+        userInstance.role = role;
+      }
+      if (tier && ["FREE", "PREMIUM"].includes(tier)) {
+        userInstance.tier = tier;
+      }
+      if (fullName) {
+        userInstance.full_name = fullName;
+      }
+
+      await userInstance.save();
+
+      res.status(200).json({
+        success: true,
+        message: "User updated successfully",
+        data: { user: userInstance.toJSON() },
+      });
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error",
+      });
+    }
+  }
+  // Admin: Tạo user mới
+  static async createUser(req, res) {
+    try {
+      const { email, password, fullName, role, tier } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Email and password are required",
+        });
+      }
+
+      // Check if email exists
+      const existingUser = await UserModel.findByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          message: "Email already exists",
+        });
+      }
+
+      const newUser = await UserModel.create({
+        email,
+        password,
+        fullName,
+        role: role || "USER",
+        tier: tier || "FREE",
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "User created successfully",
+        data: { user: newUser },
+      });
+    } catch (error) {
+      console.error("Create user error:", error);
       res.status(500).json({
         success: false,
         message: "Server error",
