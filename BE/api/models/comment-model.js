@@ -39,7 +39,7 @@ const Comment = sequelize.define(
       field: "created_at",
     },
     status: {
-      type: DataTypes.ENUM("PENDING", "APPROVED", "REJECTED"),
+      type: DataTypes.STRING(20),
       allowNull: false,
       defaultValue: "PENDING",
     },
