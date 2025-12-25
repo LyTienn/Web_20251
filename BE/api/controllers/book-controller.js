@@ -3,6 +3,7 @@ import Subject from "../models/subject-model.js";
 import Author from "../models/author-model.js";
 import BookSubject from "../models/book_subject-model.js";
 import BookShelf from "../models/bookshelf-model.js";
+import BookBookshelf from "../models/book_bookshelf-model.js";
 import { Op } from "sequelize";
 
 // Thiết lập association nếu chưa có
@@ -12,29 +13,45 @@ if (!Book.associations.Author) {
 if (!Book.associations.Subjects) {
   Book.belongsToMany(Subject, { through: BookSubject, foreignKey: "book_id", otherKey: "subject_id" });
 }
+if (!Book.associations.bookshelves) {
+  Book.belongsToMany(BookShelf, {
+    through: BookBookshelf,
+    foreignKey: "book_id",
+    otherKey: "bookshelf_id",
+    as: "bookshelves"
+  });
+}
 
 
 
 // Lấy toàn bộ sách (có phân trang)
 export const getAllBooks = async (req, res) => {
   try {
-    const { subjectId, authorId, page = 1, limit = 10, q } = req.query;
+    const { subjectId, authorId, page = 1, limit = 10, keyword, q } = req.query;
     let where = { is_deleted: 0 }; // Soft filter
     const offset = (page - 1) * limit;
 
-    if (q) {
-      where.title = { [Op.iLike]: `%${q}%` };
-    }
+    const searchTerm = keyword || q;
 
     if (authorId) {
       where.author_id = authorId;
     }
 
-    if (keyword) {
+    if (searchTerm) {
+      // Tìm các author_id có tên khớp với từ khóa
+      const authors = await Author.findAll({
+        where: {
+          name: { [Op.iLike]: `%${searchTerm}%` }
+        },
+        attributes: ['id']
+      });
+      const matchedAuthorIds = authors.map(a => a.id);
+
       where = {
         ...where,
         [Op.or]: [
-          { title: { [Op.iLike]: `%${keyword}%` } }
+          { title: { [Op.iLike]: `%${searchTerm}%` } },
+          { author_id: { [Op.in]: matchedAuthorIds } }
         ]
       };
     }
@@ -81,6 +98,7 @@ export const getAllBooks = async (req, res) => {
       where,
       include,
       limit: parseInt(limit),
+      // logging: console.log,
       offset: parseInt(offset),
       distinct: true, // Important for include to count correctly
       order: [['created_at', 'DESC']] // Default sort
