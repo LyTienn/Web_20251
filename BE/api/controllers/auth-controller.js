@@ -87,23 +87,19 @@ class AuthController {
   static async login(req, res) {
     try {
       const { email, password } = req.body;
-      console.log(`[LOGIN DEBUG] Attempting login for: ${email}`);
 
       const user = await UserModel.findByEmail(email);
       if (!user) {
-        console.log(`[LOGIN DEBUG] User not found (or is_deleted != 0).`);
         return res.status(401).json({
           success: false,
           message: "Invalid email or password",
         });
       }
-      console.log(`[LOGIN DEBUG] User found. Hash: ${user.password_hash.substring(0, 20)}...`);
 
       const isPasswordValid = await UserModel.comparePassword(
         password,
         user.password_hash
       );
-      console.log(`[LOGIN DEBUG] Password valid: ${isPasswordValid}`);
 
       if (!isPasswordValid) {
         return res.status(401).json({
