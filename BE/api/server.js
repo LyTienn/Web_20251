@@ -137,4 +137,3 @@ const startServer = async () => {
 };
 
 startServer();
-// Forced restart for DB sync
