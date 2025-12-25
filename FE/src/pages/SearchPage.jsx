@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import axios from "@/config/Axios-config";
-import BookCard from "@/components/BookCard"; 
-import Header from "@/components/HeaderBar"; 
+import BookCard from "@/components/BookCard";
+import Header from "@/components/HeaderBar";
 import { Loader2, Search } from "lucide-react";
 
 const SearchPage = () => {
@@ -17,8 +17,11 @@ const SearchPage = () => {
             try {
                 setLoading(true);
                 const res = await axios.get(`/books?keyword=${encodeURIComponent(query)}`);
-                const resultData = res.data?.data || res.data || [];
-                setBooks(resultData);
+                // Backend returns { success: true, data: { total, books: [] } }
+                // Axios config unwraps initial response.data
+                // So res is { success: true, data: { total, books: [] } }
+                const resultData = res.data?.books || [];
+                setBooks(Array.isArray(resultData) ? resultData : []);
             } catch (error) {
                 console.error("Lỗi khi lấy kết quả tìm kiếm:", error);
             } finally {
@@ -62,8 +65,8 @@ const SearchPage = () => {
                                 </div>
                                 <h3 className="text-lg font-medium text-slate-900">Không tìm thấy cuốn nào</h3>
                                 <p className="text-slate-500 max-w-md text-center mt-2 mb-6">
-                                    Rất tiếc, chúng tôi không tìm thấy cuốn sách nào khớp với từ khóa 
-                                    <span className="font-semibold text-slate-700 mx-1">"{query}"</span>. 
+                                    Rất tiếc, chúng tôi không tìm thấy cuốn sách nào khớp với từ khóa
+                                    <span className="font-semibold text-slate-700 mx-1">"{query}"</span>.
                                     Hãy thử tìm với từ khóa khác xem sao.
                                 </p>
                                 <Link to="/">
