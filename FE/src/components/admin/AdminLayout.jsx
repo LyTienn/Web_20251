@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Library,
@@ -14,16 +14,16 @@ import {
   Search,
   Bell
 } from 'lucide-react';
+import AuthService from '../../service/AuthService';
 
 function SidebarLink({ to, icon, label }) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-          isActive
-            ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium'
-            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+        `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive
+          ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium'
+          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
         }`
       }
     >
@@ -36,6 +36,19 @@ function SidebarLink({ to, icon, label }) {
 }
 
 export default function AdminLayout() {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await AuthService.logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Force redirect anyway
+      navigate('/login');
+    }
+  };
+
   return (
     <div className="font-display bg-slate-50 dark:bg-[#0B1218] text-slate-900 dark:text-white transition-colors duration-200">
       <div className="relative flex min-h-screen w-full overflow-hidden">
@@ -76,10 +89,13 @@ export default function AdminLayout() {
               </nav>
             </div>
             <div className="mt-auto border-t border-slate-200 dark:border-slate-800 pt-4 px-2">
-              <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 transition-colors" href="#">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              >
                 <LogOut size={16} />
                 <span className="text-sm font-medium">Đăng xuất</span>
-              </a>
+              </button>
             </div>
           </div>
         </aside>
