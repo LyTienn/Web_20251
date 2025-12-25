@@ -22,6 +22,7 @@ const Read = lazy(() => import('./pages/Read'));
 const BookSection = lazy(() => import('./components/BookSection'));
 const BookShelf = lazy(() => import('./pages/BookShelf'));
 const Profile = lazy(() => import('./pages/Profile'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
 
 const MainLayout = () => {
   return (
@@ -34,6 +35,7 @@ const MainLayout = () => {
           <Route path="/book/:id" element={<BookSection />} />
           <Route path="/bookshelf" element={<BookShelf />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/search" element={<SearchPage />} />
         </Routes>
       </Suspense>
     </div>

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'react-toastify';
 
-const HeaderBar = ({ searchData, onSearchResult }) => {
+const HeaderBar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -60,7 +60,7 @@ const HeaderBar = ({ searchData, onSearchResult }) => {
         
         <nav className="flex items-center gap-4">
 
-          <Search data={searchData} onResult={onSearchResult}/>
+          <Search />
           
           { isAuthenticated ? (
             <>

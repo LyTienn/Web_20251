@@ -26,16 +26,16 @@ export default function ListSection({ books = [], onSelectBook }) {
   const getCategorizedBooks = () => {
     const groupedData = {};
     books.forEach(book => {
-      const subjects = Array.isArray(book.subjects) && book.subjects.length > 0
-        ? book.subjects
+      const shelves = Array.isArray(book.bookshelves) && book.bookshelves.length > 0
+        ? book.bookshelves
         : [{ name: 'Khác' }];
-      subjects.forEach(subject => {
-        const subjectName = subject.name || 'Khác';
-        if (!groupedData[subjectName]) {
-          groupedData[subjectName] = [];
+      shelves.forEach(shelf => {
+        const shelfName = shelf.name || 'Khác';
+        if (!groupedData[shelfName]) {
+          groupedData[shelfName] = [];
         }
-        if (!groupedData[subjectName].find(b => b.id === book.id)) {
-          groupedData[subjectName].push(book);
+        if (!groupedData[shelfName].find(b => b.id === book.id)) {
+          groupedData[shelfName].push(book);
         }
       });
     });
