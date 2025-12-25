@@ -9,8 +9,8 @@ const Search = () => {
     const [keyword, setKeyword] = useState("");
     const [suggestions, setSuggestions] = useState([]);
     const [loading, setLoading] = useState(false);
-    const inputRef = useRef();
-    const wrapperRef = useRef();
+    const inputRef = useRef(null);
+    const wrapperRef = useRef(null);
     const navigate = useNavigate();
 
     //API gợi ý (Chỉ lấy tối đa 5 cuốn)
@@ -23,10 +23,14 @@ const Search = () => {
             setLoading(true);
             //API search
             const res = await axios.get(`/books?keyword=${encodeURIComponent(term)}`);
-            const data = res.data?.data || res.data || []; 
-            setSuggestions(data.slice(0, 5)); 
+            // Axios config unwraps response.data
+            // Backend: { success: true, data: { books: [], total: ... } }
+            // So res is { success: true, data: { books: ... } }
+            const resultData = res.data?.books || [];
+            setSuggestions(Array.isArray(resultData) ? resultData.slice(0, 5) : []);
         } catch (error) {
             console.error("Live search error:", error);
+            setSuggestions([]);
         } finally {
             setLoading(false);
         }
@@ -95,7 +99,7 @@ const Search = () => {
                 >
                     <SearchIcon className="h-5 w-5 text-slate-600" />
                 </button>
-                
+
                 <input
                     ref={inputRef}
                     type="text"
@@ -111,10 +115,10 @@ const Search = () => {
                         ${open ? "opacity-100 visible" : "opacity-0 invisible w-0 p-0 border-none"}
                     `}
                 />
-                
+
                 {/* Nút Xóa text */}
                 {open && keyword && (
-                    <button 
+                    <button
                         onClick={() => { setKeyword(""); setSuggestions([]); inputRef.current?.focus(); }}
                         className="absolute right-2 text-gray-400 hover:text-gray-600"
                     >
@@ -135,8 +139,8 @@ const Search = () => {
                             {/* Danh sách gợi ý */}
                             {suggestions.map((book) => (
                                 <li key={book.id} className="border-b border-slate-50 last:border-none">
-                                    <Link 
-                                        to={`/book/${book.id}`} 
+                                    <Link
+                                        to={`/book/${book.id}`}
                                         className="px-4 py-3 hover:bg-slate-50 transition flex items-start gap-3"
                                         onClick={() => setOpen(false)}
                                     >
@@ -150,9 +154,9 @@ const Search = () => {
                                     </Link>
                                 </li>
                             ))}
-                            
+
                             <li className="bg-slate-50 p-2 text-center">
-                                <button 
+                                <button
                                     onClick={goToSearchPage}
                                     className="text-sm text-blue-600 font-medium hover:underline w-full py-1"
                                 >
