@@ -131,6 +131,7 @@ class AuthController {
             email: user.email,
             fullName: user.full_name,
             role: user.role,
+            tier: user.tier,
           },
         },
       });

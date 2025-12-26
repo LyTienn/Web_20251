@@ -2,11 +2,19 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, List, FileText, ChevronLeft, ArrowLeft } from "lucide-react";
+import { ChevronRight, List, FileText, ChevronLeft, ArrowLeft, Lock } from "lucide-react";
 import Header from "@/components/HeaderBar";
 import { toast } from "react-toastify";
 import axios from "@/config/Axios-config";
 import { debounce } from "lodash";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function ReadBookPage() {
   const { id: bookId } = useParams();
@@ -20,6 +28,7 @@ export default function ReadBookPage() {
   const [initialScrollPos, setInitialScrollPos] = useState(0);
   const isRestoring = useRef(false);
   const hasMarkedCompleted = useRef(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const contentRef = useRef(null);
 
@@ -210,14 +219,18 @@ export default function ReadBookPage() {
   };
 
   const handleSelectChapter = (ch) => {
-    setInitialScrollPos(0); // Reset về 0
+    if (ch.isLocked) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    setInitialScrollPos(0);
     setSelectedChapter(ch);
   };
 
   const handlePrevChapter = () => {
     const idx = getCurrentChapterIndex();
     if (idx > 0) {
-      setInitialScrollPos(0); // Reset về 0
+      setInitialScrollPos(0); 
       setSelectedChapter(chapters[idx - 1]);
     }
   };
@@ -225,8 +238,13 @@ export default function ReadBookPage() {
   const handleNextChapter = () => {
     const idx = getCurrentChapterIndex();
     if (idx >= 0 && idx < chapters.length - 1) {
-      setInitialScrollPos(0); // Reset về 0
-      setSelectedChapter(chapters[idx + 1]);
+      const nextChapter = chapters[idx + 1];
+      if (nextChapter.isLocked) {
+        setShowUpgradeModal(true);
+        return;
+      } 
+      setInitialScrollPos(0);
+      setSelectedChapter(nextChapter);
     }
   };
 
@@ -261,10 +279,11 @@ export default function ReadBookPage() {
                 {chapters.map((ch, index) => (
                     <button
                         key={ch.id || index}
-                        onClick={() => setSelectedChapter(ch)}
+                        onClick={() => handleSelectChapter(ch)}
                         className={`w-full text-left px-4 py-3 text-sm rounded-md transition-colors duration-200 mb-1 ${selectedChapter?.id === ch.id ? 'bg-blue-50 text-blue-700 font-semibold border-l-4 border-blue-600' : 'text-slate-600 hover:bg-slate-100 border-l-4 border-transparent'}`}
                     >
                         <span className="line-clamp-2">{ch.title || `Chương ${index + 1}`}</span>
+                        {ch.isLocked && <Lock className="h-3 w-3 text-slate-400 shrink-0 ml-2" />}
                     </button>
                 ))}
             </div>
@@ -308,6 +327,33 @@ export default function ReadBookPage() {
           </div>
         </div>
       </main>
+      <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto bg-yellow-100 p-3 rounded-full w-fit mb-2">
+                <Lock className="h-6 w-6 text-yellow-600" />
+            </div>
+            <DialogTitle className="text-center text-xl">
+                Nội dung dành cho Hội viên
+            </DialogTitle>
+            <DialogDescription className="text-center pt-2">
+              Bạn đã đọc hết 3 chương đọc thử miễn phí của cuốn sách này. <br/>
+              Hãy nâng cấp lên gói <strong>Premium</strong> để mở khóa toàn bộ nội dung và tận hưởng kho sách không giới hạn!
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center mt-4 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowUpgradeModal(false)}>
+              Để sau
+            </Button>
+            <Button 
+                className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                onClick={() => navigate('/membership')} // Điều hướng đến trang mua gói
+            >
+              Nâng cấp ngay
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
