@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Loader2, Search } from 'lucide-react';
 import AdminAuthorService from '../../service/AdminAuthorService';
 import Pagination from '../../components/admin/Pagination';
 
@@ -10,8 +10,9 @@ export default function Authors() {
   const [editingAuthor, setEditingAuthor] = useState(null);
   const [formData, setFormData] = useState({ name: '', birth_year: '', death_year: '' });
 
-  // Pagination & Search
+  // Pagination & Search & Sort
   const [search, setSearch] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: 'default', direction: 'ASC' });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const itemsPerPage = 10;
@@ -21,7 +22,7 @@ export default function Authors() {
       fetchAuthors();
     }, 300);
     return () => clearTimeout(timer);
-  }, [currentPage, search]);
+  }, [currentPage, search, sortConfig]);
 
   const fetchAuthors = async () => {
     try {
@@ -29,7 +30,9 @@ export default function Authors() {
       const params = {
         page: currentPage,
         limit: itemsPerPage,
-        q: search
+        q: search,
+        sort: sortConfig.key !== 'default' ? sortConfig.key : undefined,
+        order: sortConfig.direction
       };
       const res = await AdminAuthorService.getAllAuthors(params);
       if (res && res.authors) {
@@ -100,42 +103,134 @@ export default function Authors() {
         </div>
         <button
           onClick={() => handleOpenModal()}
-          className="px-3 py-2 text-sm rounded-md bg-primary text-white flex items-center gap-2 hover:bg-blue-600 transition-colors"
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-2"
         >
-          <Plus size={16} />
-          Thêm tác giả
+          <Plus size={18} />
+          <span>Thêm tác giả</span>
         </button>
       </div>
 
-      <div className="p-4">
-        {/* Search Bar */}
-        <div className="relative max-w-sm mb-4">
-          <input
-            type="text"
-            className="w-full pl-3 pr-3 py-2 border rounded-md dark:bg-slate-800 dark:border-slate-700 text-sm"
-            placeholder="Tìm kiếm tác giả..."
-            value={search}
-            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-          />
+      <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-800 mb-6 mx-4">
+        <div className="flex flex-col md:flex-row gap-4 items-end md:items-center">
+          {/* Search Bar */}
+          <div className="flex-1 w-full md:w-auto">
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Tìm kiếm</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input
+                type="text"
+                className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                placeholder="Tìm tiêu đề..."
+                value={search}
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+              />
+            </div>
+          </div>
+
+          {/* Name Sort */}
+          <div className="w-full md:w-auto">
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Sắp xếp tên</label>
+            <select
+              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none min-w-[150px]"
+              value={sortConfig.key === 'name' && sortConfig.direction === 'DESC' ? 'NAME_DESC' : 'default-ASC'}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'NAME_DESC') {
+                  setSortConfig({ key: 'name', direction: 'DESC' });
+                } else {
+                  setSortConfig({ key: 'default', direction: 'ASC' });
+                }
+                setCurrentPage(1);
+              }}
+            >
+              <option value="default-ASC">A → Z</option>
+              <option value="NAME_DESC">Z → A</option>
+            </select>
+          </div>
+
+          {/* Book Count Sort */}
+          <div className="w-full md:w-auto">
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Số lượng sách</label>
+            <select
+              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none min-w-[150px]"
+              value={sortConfig.key === 'books_count' ? sortConfig.direction : ''}
+              onChange={(e) => {
+                if (e.target.value) {
+                  setSortConfig({ key: 'books_count', direction: e.target.value });
+                } else {
+                  setSortConfig({ key: 'default', direction: 'ASC' });
+                }
+                setCurrentPage(1);
+              }}
+            >
+              <option value="">Mặc định</option>
+              <option value="ASC">Ít đến Nhiều</option>
+              <option value="DESC">Nhiều đến Ít</option>
+            </select>
+          </div>
+
+          {/* Birth Year Sort */}
+          <div className="w-full md:w-auto">
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Năm sinh</label>
+            <select
+              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none min-w-[150px]"
+              value={sortConfig.key === 'birth_year' ? sortConfig.direction : ''}
+              onChange={(e) => {
+                if (e.target.value) {
+                  setSortConfig({ key: 'birth_year', direction: e.target.value });
+                } else {
+                  setSortConfig({ key: 'default', direction: 'ASC' });
+                }
+                setCurrentPage(1);
+              }}
+            >
+              <option value="">Mặc định</option>
+              <option value="ASC">Lớn tuổi đến trẻ</option>
+              <option value="DESC">Trẻ đến lớn tuổi</option>
+            </select>
+          </div>
+
+          {/* Reset Button */}
+          <div className="w-full md:w-auto">
+            <button
+              onClick={() => {
+                setSearch('');
+                setSortConfig({ key: 'default', direction: 'ASC' });
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              Đặt lại
+            </button>
+          </div>
         </div>
+      </div>
+
+      <div className="p-4 pt-0">
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 dark:bg-slate-800/30 text-xs uppercase text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-3">Tên</th>
+                <th className="px-4 py-3">Số lượng sách</th>
                 <th className="px-4 py-3">Năm sinh - Mất</th>
                 <th className="px-4 py-3 text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
               {loading ? (
-                <tr><td colSpan="3" className="text-center py-4"><Loader2 className="animate-spin inline mr-2" /> Đang tải...</td></tr>
+                <tr><td colSpan="4" className="text-center py-4"><Loader2 className="animate-spin inline mr-2" /> Đang tải...</td></tr>
               ) : authors.length === 0 ? (
-                <tr><td colSpan="3" className="text-center py-4">Không có tác giả nào</td></tr>
+                <tr><td colSpan="4" className="text-center py-4">Không có tác giả nào</td></tr>
               ) : authors.map((a) => (
                 <tr key={a.id}>
                   <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{a.name}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                    <span className="px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-xs font-semibold">
+                      {a.books_count || 0} sách
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                     {a.birth_year || a.death_year ? (
                       <>

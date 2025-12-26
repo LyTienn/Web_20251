@@ -107,39 +107,71 @@ export default function Users() {
           <p className="text-slate-500 dark:text-slate-400">Theo dõi và quản trị tài khoản người dùng.</p>
         </div>
 
-        {/* Filters */}
-        <div className="flex gap-2">
-          <select
-            className="px-3 py-2 text-sm rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700"
-            value={roleFilter}
-            onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
-          >
-            <option value="">Tất cả Role</option>
-            <option value="USER">User</option>
-            <option value="ADMIN">Admin</option>
-          </select>
-          <select
-            className="px-3 py-2 text-sm rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700"
-            value={tierFilter}
-            onChange={(e) => { setTierFilter(e.target.value); setCurrentPage(1); }}
-          >
-            <option value="">Tất cả Tier</option>
-            <option value="FREE">Free</option>
-            <option value="PREMIUM">Premium</option>
-          </select>
+      </div>
+
+      {/* Standardized Filter Container */}
+      <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-800 mb-6 mx-4">
+        <div className="flex flex-col md:flex-row gap-4 items-end md:items-center">
+          {/* Search Bar */}
+          <div className="flex-1 w-full md:w-auto">
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Tìm kiếm</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input
+                className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                placeholder="Tìm người dùng (Tên, Email)..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+              />
+            </div>
+          </div>
+
+          {/* Role Filter */}
+          <div className="w-full md:w-auto">
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Vai trò</label>
+            <select
+              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none min-w-[150px]"
+              value={roleFilter}
+              onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="">Tất cả Role</option>
+              <option value="USER">User</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </div>
+
+          {/* Tier Filter */}
+          <div className="w-full md:w-auto">
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Hạng thành viên</label>
+            <select
+              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none min-w-[150px]"
+              value={tierFilter}
+              onChange={(e) => { setTierFilter(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="">Tất cả Tier</option>
+              <option value="FREE">Free</option>
+              <option value="PREMIUM">Premium</option>
+            </select>
+          </div>
+
+          {/* Reset Button */}
+          <div className="w-full md:w-auto">
+            <button
+              onClick={() => {
+                setSearch('');
+                setRoleFilter('');
+                setTierFilter('');
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              Đặt lại
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="p-4">
-        <div className="relative max-w-md mb-4">
-          <input
-            className="w-full h-10 pl-10 pr-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
-            placeholder="Tìm người dùng (Tên, Email)..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-          />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-        </div>
+      <div className="p-4 pt-0">
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">

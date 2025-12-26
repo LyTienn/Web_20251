@@ -1,16 +1,11 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Search, UserSquare, Bookmark, Heart, Plus, X, Trash2, Loader2 } from 'lucide-react';
+import { Search, UserSquare, Bookmark, Heart, Loader2 } from 'lucide-react';
 import AdminUserService from '../../service/AdminUserService';
 import BookshelfAdminService from '../../service/BookshelfAdminService';
 
-function BookCard({ book, badgeIcon, onRemove }) {
+function BookCard({ book, badgeIcon }) {
   return (
     <div className="group relative flex flex-col gap-3 p-3 rounded-xl bg-white border border-slate-200 hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-slate-200/50">
-      <div className="absolute right-2 top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={onRemove} className="p-1 rounded-full bg-black/60 hover:bg-red-500 text-white backdrop-blur-sm transition-colors" title="Xóa khỏi danh sách">
-          <X size={14} />
-        </button>
-      </div>
       <div className="aspect-[2/3] w-full rounded-lg bg-slate-200 overflow-hidden relative">
         <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={book.title} src={book.image_url || book.cover || '/placeholder-book.png'} />
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
@@ -30,101 +25,6 @@ function BookCard({ book, badgeIcon, onRemove }) {
   );
 }
 
-// Modal to search and select books
-function AddBookModal({ isOpen, onClose, onAdd, status }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [books, setBooks] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [addingId, setAddingId] = useState(null);
-
-  // Debounced search could be better, but simple effect is okay for admin
-  useEffect(() => {
-    const fetchBooks = async () => {
-      try {
-        setLoading(true);
-        // Call API to search books
-        const AdminBookService = (await import('../../service/AdminBookService')).default;
-        const res = await AdminBookService.getAllBooks({ q: searchTerm, limit: 10 });
-        setBooks(res?.books || res?.data || []);
-      } catch (err) {
-        console.error("Failed to search books", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (isOpen) {
-      fetchBooks();
-    }
-  }, [isOpen, searchTerm]);
-
-  if (!isOpen) return null;
-
-  const handleAdd = async (book) => {
-    try {
-      setAddingId(book.id);
-      await onAdd(book.id, status);
-      onClose();
-    } catch (err) {
-      alert("Failed to add book: " + (err.response?.data?.message || err.message));
-    } finally {
-      setAddingId(null);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
-        <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-800">
-          <h3 className="text-lg font-semibold">
-            Thêm vào {status === 'READING' ? 'sách đang đọc' : 'sách yêu thích'}
-          </h3>
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-700">
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="p-4 border-b border-slate-200">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input
-              className="w-full pl-9 pr-3 py-2 border rounded-md dark:bg-slate-800 dark:border-slate-700"
-              placeholder="Tìm kiếm sách..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              autoFocus
-            />
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {loading ? (
-            <div className="flex justify-center py-4"><Loader2 className="animate-spin text-primary" /></div>
-          ) : books.length === 0 ? (
-            <p className="text-center text-slate-500">Không tìm thấy sách</p>
-          ) : (
-            books.map(book => (
-              <div key={book.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-100">
-                <img src={book.image_url || '/placeholder-book.png'} className="w-10 h-14 object-cover rounded bg-slate-200" alt="" />
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-sm truncate">{book.title}</h4>
-                  <p className="text-xs text-slate-500 truncate">{book.Author?.name || book.author || 'Unknown'}</p>
-                </div>
-                <button
-                  onClick={() => handleAdd(book)}
-                  disabled={addingId === book.id}
-                  className="px-3 py-1.5 text-xs font-medium bg-primary text-white rounded hover:bg-blue-600 disabled:opacity-50"
-                >
-                  {addingId === book.id ? <Loader2 size={14} className="animate-spin" /> : 'Thêm'}
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Bookshelves() {
   const [filter, setFilter] = useState('');
   const [users, setUsers] = useState([]);
@@ -132,10 +32,6 @@ export default function Bookshelves() {
   const [library, setLibrary] = useState({ reading: [], favorites: [] });
   const [loading, setLoading] = useState(true);
   const [libraryLoading, setLibraryLoading] = useState(false);
-
-  // Modal State
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [addStatus, setAddStatus] = useState('READING'); // 'READING' | 'FAVORITE'
 
   // Load users on mount
   useEffect(() => {
@@ -185,65 +81,8 @@ export default function Bookshelves() {
 
   const selectedUser = users.find((u) => u.user_id === selectedUserId);
 
-  // Remove book handler
-  const handleRemove = useCallback(async (bookId, status) => {
-    if (!selectedUserId) return;
-    if (!window.confirm("Bạn có chắc muốn xóa sách này khỏi kệ?")) return;
-    try {
-      await BookshelfAdminService.removeFromUserBookshelf(selectedUserId, bookId, status);
-      setLibrary((prev) => ({
-        reading: status === 'READING' ? prev.reading.filter((b) => b.id !== bookId) : prev.reading,
-        favorites: status === 'FAVORITE' ? prev.favorites.filter((b) => b.id !== bookId) : prev.favorites,
-      }));
-    } catch (err) {
-      alert("Failed to remove: " + (err.response?.data?.message || err.message));
-    }
-  }, [selectedUserId]);
-
-  // Open modal
-  const openAddModal = (status) => {
-    setAddStatus(status);
-    setShowAddModal(true);
-  };
-
-  // Add book handler
-  const handleAddBook = async (bookId, status) => {
-    if (!selectedUserId) return;
-    await BookshelfAdminService.addToUserBookshelf(selectedUserId, bookId, status);
-    // Reload library to show new state
-    await loadLibrary();
-  };
-
-  // Delete User Handler
-  const handleDeleteUser = async () => {
-    if (!selectedUser) return;
-    if (window.confirm(`Bạn có chắc chắn muốn xóa người dùng "${selectedUser.full_name || selectedUser.email}"?`)) {
-      try {
-        await AdminUserService.deleteUser(selectedUser.user_id || selectedUser.id);
-        // Remove from local list
-        const remainingUsers = users.filter(u => u.user_id !== selectedUser.user_id);
-        setUsers(remainingUsers);
-        if (remainingUsers.length > 0) {
-          setSelectedUserId(remainingUsers[0].user_id);
-        } else {
-          setSelectedUserId(null);
-          setLibrary({ reading: [], favorites: [] });
-        }
-      } catch (err) {
-        alert("Không thể xóa user: " + (err.response?.data?.message || err.message));
-      }
-    }
-  };
-
   return (
     <div className="flex h-full bg-slate-50 relative">
-      <AddBookModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onAdd={handleAddBook}
-        status={addStatus}
-      />
-
       {/* Left pane: user list */}
       <aside className="w-[300px] flex flex-col border-r border-slate-200 bg-white flex-shrink-0">
         <div className="p-4 border-b border-slate-200">
@@ -302,15 +141,6 @@ export default function Bookshelves() {
                 <UserSquare className="text-primary" size={18} />
                 <span>Thư viện của {selectedUser.full_name || selectedUser.email}</span>
               </h2>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleDeleteUser}
-                  className="px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 text-sm font-medium transition-colors border border-transparent hover:border-red-100 flex items-center gap-2"
-                >
-                  <Trash2 size={16} />
-                  Xóa người dùng
-                </button>
-              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-8 space-y-12">
@@ -327,28 +157,16 @@ export default function Bookshelves() {
                         <h3 className="text-xl font-bold text-slate-900">Sách đang đọc</h3>
                         <span className="px-2 py-0.5 rounded-full bg-slate-200 text-xs font-bold text-slate-600">{library.reading.length}</span>
                       </div>
-                      <button
-                        onClick={() => openAddModal('READING')}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors shadow-sm"
-                      >
-                        <Plus size={18} />
-                        Thêm sách đang đọc
-                      </button>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {library.reading.map((b) => (
-                        <BookCard key={b.id} book={b} badgeIcon={<Bookmark size={16} />} onRemove={() => handleRemove(b.id, 'READING')} />
-                      ))}
-                      <button
-                        onClick={() => openAddModal('READING')}
-                        className="flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 border-dashed border-slate-300 hover:border-primary/50 hover:bg-slate-50 transition-all aspect-[2/3] lg:aspect-auto lg:h-auto min-h-[240px]"
-                      >
-                        <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                          <Plus size={20} />
-                        </div>
-                        <span className="text-sm font-medium text-slate-500 text-center">Thêm sách đang đọc</span>
-                      </button>
-                    </div>
+                    {library.reading.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {library.reading.map((b) => (
+                          <BookCard key={b.id} book={b} badgeIcon={<Bookmark size={16} />} />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-500 text-sm italic">Chưa có sách nào trong danh sách đang đọc.</p>
+                    )}
                   </div>
 
                   {/* Favorites section */}
@@ -358,28 +176,16 @@ export default function Bookshelves() {
                         <h3 className="text-xl font-bold text-slate-900">Sách yêu thích</h3>
                         <span className="px-2 py-0.5 rounded-full bg-slate-200 text-xs font-bold text-slate-600">{library.favorites.length}</span>
                       </div>
-                      <button
-                        onClick={() => openAddModal('FAVORITE')}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors shadow-sm"
-                      >
-                        <Heart size={18} className="text-red-500" />
-                        Thêm sách yêu thích
-                      </button>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {library.favorites.map((b) => (
-                        <BookCard key={b.id} book={b} badgeIcon={<Heart size={16} className="text-red-400" />} onRemove={() => handleRemove(b.id, 'FAVORITE')} />
-                      ))}
-                      <button
-                        onClick={() => openAddModal('FAVORITE')}
-                        className="flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 border-dashed border-slate-300 hover:border-primary/50 hover:bg-slate-50 transition-all aspect-[2/3] lg:aspect-auto lg:h-auto min-h-[240px]"
-                      >
-                        <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                          <Plus size={20} />
-                        </div>
-                        <span className="text-sm font-medium text-slate-500 text-center">Thêm sách yêu thích</span>
-                      </button>
-                    </div>
+                    {library.favorites.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {library.favorites.map((b) => (
+                          <BookCard key={b.id} book={b} badgeIcon={<Heart size={16} className="text-red-400" />} />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-500 text-sm italic">Chưa có sách nào trong danh sách yêu thích.</p>
+                    )}
                   </div>
                 </>
               )}
