@@ -22,7 +22,7 @@ export default function Dashboard() {
           AdminStatsService.getRecentComments(5),
           AdminStatsService.getRegistrationStats(30)
         ]);
-        
+
         if (statsRes.success) setStats(statsRes.data);
         if (subjectRes.success) setSubjectStats(subjectRes.data);
         if (usersRes.success) setRecentUsers(usersRes.data.users);
@@ -83,8 +83,8 @@ export default function Dashboard() {
       value: stats?.users?.total?.toLocaleString() || '0',
       note: `${stats?.users?.premium || 0} Premium · ${stats?.users?.free || 0} Free`,
       badge: stats?.users?.newLast24h > 0 ? `+${stats.users.newLast24h} hôm nay` : 'Không có mới',
-      badgeColor: stats?.users?.newLast24h > 0 
-        ? 'text-green-500 bg-green-50 dark:bg-green-500/10' 
+      badgeColor: stats?.users?.newLast24h > 0
+        ? 'text-green-500 bg-green-50 dark:bg-green-500/10'
         : 'text-slate-500 bg-slate-50 dark:bg-slate-500/10'
     },
     {
@@ -117,7 +117,7 @@ export default function Dashboard() {
   ];
 
   const subjectColors = [
-    'bg-primary',
+    'bg-blue-600',
     'bg-purple-500',
     'bg-orange-500',
     'bg-teal-500',
@@ -129,15 +129,22 @@ export default function Dashboard() {
 
   const generateChartPath = () => {
     if (!registrationData.length) return { line: '', area: '' };
-    
+
     const maxCount = Math.max(...registrationData.map(d => parseInt(d.count) || 0), 1);
     const width = 800;
     const height = 250;
-    const padding = 25;
-    
+    const paddingLeft = 60; // Increased padding for Y-axis labels
+    const paddingRight = 20;
+    const paddingY = 25;
+
     const points = registrationData.map((d, i) => {
-      const x = padding + (i / (registrationData.length - 1 || 1)) * (width - 2 * padding);
-      const y = height - padding - ((parseInt(d.count) || 0) / maxCount) * (height - 2 * padding);
+      // Calculate X based on available width after padding
+      const availableWidth = width - paddingLeft - paddingRight;
+      const x = paddingLeft + (i / (registrationData.length - 1 || 1)) * availableWidth;
+
+      // Calculate Y based on available height
+      const availableHeight = height - (paddingY * 2);
+      const y = height - paddingY - ((parseInt(d.count) || 0) / maxCount) * availableHeight;
       return { x, y };
     });
 
@@ -145,7 +152,7 @@ export default function Dashboard() {
     if (points.length === 1) {
       return {
         line: `M${points[0].x},${points[0].y}`,
-        area: `M${points[0].x},${height} L${points[0].x},${points[0].y} L${points[0].x},${height} Z`
+        area: `M${points[0].x},${height - paddingY} L${points[0].x},${points[0].y} L${points[0].x},${height - paddingY} Z`
       };
     }
 
@@ -158,7 +165,7 @@ export default function Dashboard() {
       linePath += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${points[i].x},${points[i].y}`;
     }
 
-    const areaPath = linePath + ` L${points[points.length - 1].x},${height} L${points[0].x},${height} Z`;
+    const areaPath = linePath + ` L${points[points.length - 1].x},${height - paddingY} L${points[0].x},${height - paddingY} Z`;
 
     return { line: linePath, area: areaPath };
   };
@@ -178,7 +185,7 @@ export default function Dashboard() {
             <Download size={18} />
             <span>Xuất báo cáo</span>
           </button>
-          <Link to="/admin/books" className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-2">
+          <Link to="/admin/books" state={{ openAddModal: true }} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-2">
             <Plus size={18} />
             <span>Thêm sách mới</span>
           </Link>
@@ -218,6 +225,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="relative w-full aspect-[2/1] max-h-[300px]">
+            {/* Chart Container */}
             <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 300">
               <defs>
                 <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
@@ -225,10 +233,42 @@ export default function Dashboard() {
                   <stop offset="100%" stopColor="#137fec" stopOpacity="0" />
                 </linearGradient>
               </defs>
-              <line stroke="#334155" strokeDasharray="4 4" strokeOpacity="0.2" x1="0" x2="800" y1="250" y2="250" />
-              <line stroke="#334155" strokeDasharray="4 4" strokeOpacity="0.2" x1="0" x2="800" y1="175" y2="175" />
-              <line stroke="#334155" strokeDasharray="4 4" strokeOpacity="0.2" x1="0" x2="800" y1="100" y2="100" />
-              <line stroke="#334155" strokeDasharray="4 4" strokeOpacity="0.2" x1="0" x2="800" y1="25" y2="25" />
+
+              {/* Grid Lines and Labels */}
+              {/* Grid Lines and Labels */}
+              {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                const availableHeight = 250 - (25 * 2); // paddingY = 25
+                const y = 250 - 25 - (ratio * availableHeight);
+                return (
+                  <g key={ratio}>
+                    {/* Horizontal Grid Line */}
+                    <line
+                      stroke="#334155"
+                      strokeDasharray="4 4"
+                      strokeOpacity="0.1"
+                      x1="65" // Padding Left + 5
+                      x2="800"
+                      y1={y}
+                      y2={y}
+                    />
+                    {/* Y-axis Label */}
+                    <text
+                      x="55"
+                      y={y + 5} // Optical centering
+                      textAnchor="end"
+                      fontSize="12"
+                      fill="#94a3b8"
+                      fontWeight="500"
+                    >
+                      {Math.round(ratio * (Math.max(...registrationData.map(d => parseInt(d.count) || 0), 1)))}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Y-axis Title */}
+              <text x="10" y="20" fontSize="14" fill="#64748b" fontWeight="bold">SL</text>
+
               {chartArea && <path d={chartArea} fill="url(#chartGradient)" />}
               {chartLine && <path d={chartLine} fill="none" stroke="#137fec" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />}
             </svg>
@@ -270,9 +310,9 @@ export default function Dashboard() {
                   <span className="text-slate-500 whitespace-nowrap">{item.count} ({item.percent}%)</span>
                 </div>
                 <div className="h-2 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full ${subjectColors[idx % subjectColors.length]} rounded-full transition-all duration-500`} 
-                    style={{ width: `${Math.max(item.percent, 2)}%` }} 
+                  <div
+                    className={`h-full ${subjectColors[idx % subjectColors.length]} rounded-full transition-all duration-500`}
+                    style={{ width: `${Math.max(item.percent, 2)}%` }}
                   />
                 </div>
               </div>
@@ -318,11 +358,10 @@ export default function Dashboard() {
                     <td className="px-6 py-4 text-slate-500">{user.email}</td>
                     <td className="px-6 py-4 text-slate-500">{formatDate(user.created_at)}</td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.tier === 'PREMIUM' 
-                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                          : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
-                      }`}>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${user.tier === 'PREMIUM'
+                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
+                        }`}>
                         {user.tier === 'PREMIUM' && <Crown size={12} />}
                         {user.tier}
                       </span>

@@ -2,11 +2,12 @@ import Subject from "../models/subject-model.js";
 import BookSubject from "../models/book_subject-model.js";
 import Book from "../models/book-model.js";
 import { Op } from "sequelize";
+import sequelize from "../config/db-config.js";
 
 // Lấy toàn bộ chủ đề
 export const getAllSubjects = async (req, res) => {
   try {
-    const { page = 1, limit = 10, q } = req.query;
+    const { page = 1, limit = 10, q, sort, order } = req.query;
     const offset = (page - 1) * limit;
 
     let where = { is_deleted: 0 }; // Soft filter
@@ -14,9 +15,21 @@ export const getAllSubjects = async (req, res) => {
       where.name = { [Op.iLike]: `%${q}%` };
     }
 
+    let orderClause = [['name', 'ASC']];
+    if (sort === 'books_count') {
+      orderClause = [[sequelize.literal('(SELECT COUNT(*) FROM book_subjects WHERE book_subjects.subject_id = "subjects"."id")'), order === 'ASC' ? 'ASC' : 'DESC']];
+    } else if (sort === 'name') {
+      orderClause = [['name', order === 'DESC' ? 'DESC' : 'ASC']];
+    }
+
     const { count, rows } = await Subject.findAndCountAll({
       where,
-      order: [['name', 'ASC']],
+      attributes: {
+        include: [
+          [sequelize.literal('(SELECT COUNT(*) FROM book_subjects WHERE book_subjects.subject_id = "subjects"."id")'), 'books_count']
+        ]
+      },
+      order: orderClause,
       limit: parseInt(limit),
       offset: parseInt(offset)
     });

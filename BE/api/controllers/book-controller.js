@@ -5,6 +5,7 @@ import BookSubject from "../models/book_subject-model.js";
 import BookShelf from "../models/bookshelf-model.js";
 import BookBookshelf from "../models/book_bookshelf-model.js";
 import { Op } from "sequelize";
+import sequelize from "../config/db-config.js";
 
 // Thiết lập association nếu chưa có
 if (!Book.associations.Author) {
@@ -27,7 +28,7 @@ if (!Book.associations.bookshelves) {
 // Lấy toàn bộ sách (có phân trang)
 export const getAllBooks = async (req, res) => {
   try {
-    const { subjectId, authorId, page = 1, limit = 10, keyword, q } = req.query;
+    const { subjectId, authorId, page = 1, limit = 10, keyword, q, type } = req.query;
     let where = { is_deleted: 0 }; // Soft filter
     const offset = (page - 1) * limit;
 
@@ -35,6 +36,10 @@ export const getAllBooks = async (req, res) => {
 
     if (authorId) {
       where.author_id = authorId;
+    }
+
+    if (type) {
+      where.type = type;
     }
 
     if (searchTerm) {
@@ -65,7 +70,7 @@ export const getAllBooks = async (req, res) => {
       {
         model: Subject,
         as: "subjects",
-        attributes: ["name"],
+        attributes: ["id", "name"],
         through: { attributes: [] },
       },
       {
@@ -97,6 +102,11 @@ export const getAllBooks = async (req, res) => {
     const { count, rows } = await Book.findAndCountAll({
       where,
       include,
+      attributes: {
+        include: [
+          [sequelize.literal('(SELECT COUNT(*) FROM chapters WHERE chapters.book_id = books.id)'), 'chapter_count']
+        ]
+      },
       limit: parseInt(limit),
       // logging: console.log,
       offset: parseInt(offset),
@@ -123,6 +133,11 @@ export const getBookById = async (req, res) => {
   try {
     const book = await Book.findOne({
       where: { id: req.params.id, is_deleted: 0 },
+      attributes: {
+        include: [
+          [sequelize.literal('(SELECT COUNT(*) FROM chapters WHERE chapters.book_id = books.id)'), 'chapter_count']
+        ]
+      },
       include: [
         {
           model: Author,
@@ -130,7 +145,7 @@ export const getBookById = async (req, res) => {
         },
         {
           model: Subject,
-          attributes: ["name"],
+          attributes: ["id", "name"],
           through: { attributes: [] },
         },
         {
@@ -257,7 +272,7 @@ export const createBook = async (req, res) => {
     const bookWithDetails = await Book.findByPk(book.id, {
       include: [
         { model: Author, as: "author", attributes: ["name"] },
-        { model: Subject, as: "subjects", attributes: ["name"], through: { attributes: [] } },
+        { model: Subject, as: "subjects", attributes: ["id", "name"], through: { attributes: [] } },
       ],
     });
     res.status(201).json({ success: true, data: bookWithDetails, message: "Tạo sách thành công" });
@@ -313,7 +328,7 @@ export const updateBook = async (req, res) => {
     const bookWithDetails = await Book.findByPk(book.id, {
       include: [
         { model: Author, as: "author", attributes: ["name"] },
-        { model: Subject, as: "subjects", attributes: ["name"], through: { attributes: [] } },
+        { model: Subject, as: "subjects", attributes: ["id", "name"], through: { attributes: [] } },
       ],
     });
     res.json({ success: true, data: bookWithDetails, message: "Cập nhật sách thành công" });

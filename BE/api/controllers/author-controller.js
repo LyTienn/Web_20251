@@ -1,11 +1,12 @@
 import Author from "../models/author-model.js";
 import Book from "../models/book-model.js";
 import { Op } from "sequelize";
+import sequelize from "../config/db-config.js";
 
 // Lấy toàn bộ tác giả (có phân trang)
 export const getAllAuthors = async (req, res) => {
   try {
-    const { page = 1, limit = 10, q } = req.query;
+    const { page = 1, limit = 10, q, sort, order } = req.query;
     const offset = (page - 1) * limit;
 
     let where = { is_deleted: 0 }; // Soft delete filter
@@ -13,9 +14,23 @@ export const getAllAuthors = async (req, res) => {
       where.name = { [Op.iLike]: `%${q}%` };
     }
 
+    let orderClause = [['name', 'ASC']];
+    if (sort === 'books_count') {
+      orderClause = [[sequelize.literal('books_count'), order === 'ASC' ? 'ASC' : 'DESC']];
+    } else if (sort === 'birth_year') {
+      orderClause = [['birth_year', order === 'DESC' ? 'DESC' : 'ASC']];
+    } else if (sort === 'name') {
+      orderClause = [['name', order === 'DESC' ? 'DESC' : 'ASC']];
+    }
+
     const { count, rows } = await Author.findAndCountAll({
       where,
-      order: [['name', 'ASC']],
+      attributes: {
+        include: [
+          [sequelize.literal('(SELECT COUNT(*) FROM books WHERE books.author_id = "authors"."id" AND books.is_deleted = 0)'), 'books_count']
+        ]
+      },
+      order: orderClause,
       limit: parseInt(limit),
       offset: parseInt(offset)
     });

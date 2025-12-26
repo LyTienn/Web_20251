@@ -8,20 +8,18 @@ export default defineConfig({
   server: {
     allowedHosts: [
       'proconsultation-coordinately-merlin.ngrok-free.dev'
-    ]
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
+    ],
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
       },
+    },
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
     },
   },
 })
