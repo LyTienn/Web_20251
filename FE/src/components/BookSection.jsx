@@ -28,8 +28,6 @@ export default function BookSection({ book: bookProp }) {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [book, setBook] = useState(bookProp || null);
   const [showFullSummary, setShowFullSummary] = useState(false);
-  
-  // Chỉ lấy trạng thái đăng nhập, không cần token thủ công
   const { isAuthenticated } = useSelector((state) => state.auth);
 
   // LOGIC 1: Load thông tin sách
@@ -38,8 +36,6 @@ export default function BookSection({ book: bookProp }) {
       setLoading(true);
       axios.get(`/books/${params.id}`)
         .then(res => {
-          // Vì interceptor của bạn trả về response.data, nên 'res' ở đây chính là body response
-          // API trả về { success: true, data: { ...book } } nên setBook lấy res.data
           setBook(res.data || res); 
         })
         .catch(() => setBook(null))
@@ -47,15 +43,13 @@ export default function BookSection({ book: bookProp }) {
     }
   }, [params.id, bookProp]);
 
-  // LOGIC 2: Kiểm tra trạng thái yêu thích ngay khi load (Fix lỗi F5 mất màu)
+  // LOGIC 2: Kiểm tra trạng thái yêu thích ngay khi load 
   useEffect(() => {
     if (isAuthenticated && book?.id) {
       const checkFavoriteStatus = async () => {
         try {
-          // Gọi API check
           const res = await axios.get(`/bookshelf/books/${book.id}/check`);
-          
-          // res là body response do interceptor xử lý
+                 
           if (res.success && res.data) {
             setIsFavorite(res.data.isFavorite);
           }
@@ -75,7 +69,7 @@ export default function BookSection({ book: bookProp }) {
     );
   }
 
-  // LOGIC 3: Xử lý bấm nút tim (Toggle)
+  // LOGIC 3: Xử lý Toggle
   const handleToggleFavorite = async () => {
     if (!isAuthenticated) {
       toast.error("Bạn cần đăng nhập để thêm sách vào yêu thích");
@@ -83,26 +77,21 @@ export default function BookSection({ book: bookProp }) {
       return;
     }
 
-    // 1. Optimistic Update: Cập nhật UI ngay lập tức
     const previousState = isFavorite;
     setIsFavorite(!isFavorite);
 
     try {
       if (previousState) {
-        // Đang like -> Xóa (DELETE)
         await axios.delete(`/bookshelf/books/${book.id}?status=FAVORITE`);
         toast.success("Đã xóa sách khỏi yêu thích");
       } else {
-        // Chưa like -> Thêm (POST)
         await axios.post(`/bookshelf/books/${book.id}`, { status: "FAVORITE" });
         toast.success("Đã thêm sách vào yêu thích");
       }
       
       // Bắn sự kiện để BookShelf cập nhật lại list
       window.dispatchEvent(new Event("bookshelf-updated"));
-
     } catch (error) {
-      // Nếu lỗi thì hoàn tác UI
       setIsFavorite(previousState);
       toast.error(error.message || "Đã có lỗi xảy ra.");
     }

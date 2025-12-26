@@ -165,14 +165,48 @@ export const getBookById = async (req, res) => {
   }
 };
 
-// Lấy danh sách chương của một sách
-
+// Lấy danh sách chương của một sách + kiểm tra quyền truy cập nếu sách PREMIUM
+import User from "../models/user-model.js";
 import Chapter from "../models/chapter-model.js";
 export const getBookChapters = async (req, res) => {
   try {
-    const chapters = await Chapter.findAll({ where: { book_id: req.params.id } });
-    res.json({ success: true, data: chapters });
+    const { id: bookId } = req.params;
+    const book = await Book.findByPk(bookId);
+    if (!book) return res.status(404).json({ success: false, message: "Sách không tồn tại" });
+    const chapters = await Chapter.findAll({ 
+        where: { book_id: bookId },
+        order: [['id', 'ASC']] 
+    });
+    if (book.type === "PREMIUM") {
+      const userId = req.user?.id || req.user?.userId; 
+      if (!userId) {
+        return res.status(401).json({ success: false, message: "Vui lòng đăng nhập để đọc sách" });
+      }
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(401).json({ success: false, message: "Người dùng không tồn tại" });
+      }
+
+      if (user.tier !== "PREMIUM" && user.role !== "ADMIN") {
+        const processedChapters = chapters.map((ch, index) => {
+            const chapterData = ch.toJSON(); 
+            if (index < 3) {
+                return { ...chapterData, isLocked: false };
+            }         
+            return { 
+                ...chapterData, 
+                content: "Nội dung dành riêng cho hội viên Premium.", 
+                isLocked: true 
+            };
+        });
+        return res.json({ success: true, data: processedChapters });
+      }
+    }
+    const fullChapters = chapters.map(ch => ({ ...ch.toJSON(), isLocked: false }));
+    res.json({ success: true, data: fullChapters });
+
   } catch (error) {
+    console.error(error);
     res.status(500).json({ success: false, message: "Lỗi lấy danh sách chương", error: error.message });
   }
 };

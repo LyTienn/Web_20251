@@ -7,7 +7,7 @@ const router = Router();
 // Public routes
 router.get("/", getAllBooks);
 router.get("/:id", getBookById);
-router.get("/:id/chapters", getBookChapters);
+router.get("/:id/chapters", authenticate, getBookChapters);
 
 // Admin routes
 router.post("/", authenticate, authorizeRoles("ADMIN"), createBook);
