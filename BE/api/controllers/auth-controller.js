@@ -1,4 +1,5 @@
 import UserModel from "../models/user-model.js";
+import Subscription from "../models/subscription-model.js";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -122,6 +123,22 @@ class AuthController {
       // Set cookies
       AuthController.setCookies(res, accessToken, refreshToken);
 
+      let packageDetails = null;
+      if (user.tier === 'PREMIUM') {
+          const activeSub = await Subscription.findOne({
+              where: { 
+                  user_id: user.user_id, 
+                  status: 'ACTIVE' 
+              },
+              order: [['expiry_date', 'DESC']], 
+              raw: true 
+          });
+
+          if (activeSub) {
+              packageDetails = activeSub.package_details;
+          }
+      }
+
       res.status(200).json({
         success: true,
         message: "Login successful",
@@ -132,6 +149,7 @@ class AuthController {
             fullName: user.full_name,
             role: user.role,
             tier: user.tier,
+            package_details: packageDetails,
           },
         },
       });

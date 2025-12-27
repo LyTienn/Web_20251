@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'react-toastify';
+import { setUser } from '@/redux/Auth/AuthSlice';
 
 const HeaderBar = () => {
   const dispatch = useDispatch();
@@ -22,6 +23,17 @@ const HeaderBar = () => {
   
   // Lấy state auth
   const { user, isAuthenticated } = useSelector((state) => state.auth);
+
+//   useEffect(() => {
+//   const fetchProfile = async () => {
+//     const res = await fetch('/profile', {
+//       headers: { Authorization: `Bearer ${token}` }
+//     });
+//     const data = await res.json();
+//     dispatch(setUser(data.data));
+//   };
+//   fetchProfile();
+// }, [token, dispatch]);
 
   const handleLogout = () => {
     dispatch(logoutUser());
@@ -37,12 +49,19 @@ const HeaderBar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // gói dịch vụ (Sửa thêm các gói nếu có trong tương lai)
   const getSubscriptionText = () => {
+    console.log("Check User Data:", user);
     if (!user) return "";
-    if (user.role === "admin") return "Quản trị viên";
-    if (user.role === "member") return "Hội viên"; 
-    // Mặc định cho user thường
+    if (user.role === "ADMIN") return "Quản trị viên";
+    if (user.tier === "PREMIUM") {
+      const pkg = user.package_details;
+
+      if (pkg === "3_THANG") return "Hội viên 3 tháng";
+      if (pkg === "6_THANG") return "Hội viên 6 tháng";
+      if (pkg === "12_THANG") return "Hội viên 1 năm";
+        
+      return "Hội viên Premium"; 
+    }
     return "Gói thường";
   };
 
@@ -68,7 +87,7 @@ const HeaderBar = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate('/subscriptions')}
+                  onClick={() => navigate('/membership')}
                   className = "hidden sm:flex border-yellow-500 text-yellow-600 hover:bg-yellow-50"
                 >
                   <Zap className='h-4 w-4 mr-2 fill-yellow-500' />
