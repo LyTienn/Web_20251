@@ -23,6 +23,8 @@ const BookSection = lazy(() => import('./components/BookSection'));
 const BookShelf = lazy(() => import('./pages/BookShelf'));
 const Profile = lazy(() => import('./pages/Profile'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
+const Membership = lazy(() => import('./pages/Membership'));
+const Transactions = lazy(() => import('./pages/Transactions'))
 
 const MainLayout = () => {
   return (
@@ -36,6 +38,8 @@ const MainLayout = () => {
           <Route path="/bookshelf" element={<BookShelf />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/membership" element={<Membership />} />
+          <Route path="/transactions" element={<Transactions />} />
         </Routes>
       </Suspense>
     </div>
