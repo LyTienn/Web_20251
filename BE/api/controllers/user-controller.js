@@ -1,28 +1,51 @@
 import UserModel from "../models/user-model.js";
-
+import Subscription from "../models/subscription-model.js";
 class UserController {
   // Lấy thông tin profile của user hiện tại
   static async getProfile(req, res) {
     try {
-      const user = await UserModel.findById(req.user.userId);
+      const userId = req.user.userId; // Lấy từ token đã decode
+
+      // 1. Lấy thông tin User cơ bản
+      // Sử dụng raw: true (hoặc user.get({ plain: true }) nếu dùng instance) để dễ gán thuộc tính
+      const user = await UserModel.findByPk(userId, {
+        attributes: { exclude: ["password", "refresh_token"] },
+        raw: true 
+      });
 
       if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
+        return res.status(404).json({ success: false, message: "User not found" });
       }
 
+      let packageDetails = null;
+
+      if (user.tier === 'PREMIUM') {
+        const activeSub = await Subscription.findOne({
+          where: { 
+            user_id: userId, 
+            status: 'ACTIVE' 
+          },
+          order: [['expiry_date', 'DESC']], // Lấy gói mới nhất
+          raw: true
+        });
+
+        if (activeSub) {
+          packageDetails = activeSub.package_details;
+        }
+      }
+
+      // 3. Gán vào object user trả về
+      user.package_details = packageDetails;
+
+      // 4. Trả về Frontend
       res.status(200).json({
         success: true,
-        data: { user },
+        data: user, // User lúc này đã có tier và package_details đầy đủ
       });
+
     } catch (error) {
       console.error("Get profile error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Server error",
-      });
+      res.status(500).json({ success: false, message: "Server error" });
     }
   }
 

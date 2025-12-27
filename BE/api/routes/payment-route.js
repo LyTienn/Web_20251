@@ -22,4 +22,15 @@ router.get("/history", authenticate, PaymentController.getPaymentHistory);
 router.get("/vnpay-return", PaymentController.vnpayReturn);
 // router.get("/vnpay-ipn", PaymentController.vnpayIPN);
 
+//--- SEPAY ---
+// /api/payment/sepay/create
+router.post("/sepay/create", authenticate, PaymentController.createSepayPayment);
+
+//API Webhook (SePay gọi -> Public -> KHÔNG ĐƯỢC CÓ AUTHENTICATE)
+// SePay sẽ gọi: /api/payment/sepay/webhook
+router.post("/sepay/webhook", PaymentController.sepayWebhook);
+
+//API Lịch sử giao dịch
+router.get("/history", authenticate, PaymentController.getPaymentHistory);
+
 export default router;

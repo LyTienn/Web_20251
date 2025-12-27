@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, List, FileText, ChevronLeft, ArrowLeft, Headphones, Sparkles, Loader2 } from "lucide-react";
+<<<<<<< HEAD
+import { ChevronRight, List, FileText, ChevronLeft, ArrowLeft, Headphones, Sparkles, Loader2, Lock } from "lucide-react";
 import Header from "@/components/HeaderBar";
 import { toast } from "react-toastify";
 import axios from "@/config/Axios-config";
@@ -14,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 
 export default function ReadBookPage() {
@@ -34,6 +36,8 @@ export default function ReadBookPage() {
   const [isSummarizing, setIsSummarizing] = useState(false);
 
   const isRestoring = useRef(false);
+  const hasMarkedCompleted = useRef(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const contentRef = useRef(null);
 
@@ -44,7 +48,6 @@ export default function ReadBookPage() {
           chapterId: cId,
           scrollPosition: scrollPercent
         });
-
       } catch (error) {
         console.error("❌ Lỗi lưu tiến độ:", error);
       }
@@ -170,7 +173,6 @@ export default function ReadBookPage() {
           if (targetPixel > 0) {
             element.scrollTo({ top: targetPixel, behavior: 'auto' });
             if (Math.abs(element.scrollTop - targetPixel) < 20) {
-              setInitialScrollPos(0);
               setTimeout(() => { isRestoring.current = false; }, 500);
             } else if (attempts < maxAttempts) {
               attempts++;
@@ -189,16 +191,34 @@ export default function ReadBookPage() {
     }
   }, [selectedChapter?.id, selectedChapter?.content, initialScrollPos]);
 
+  const markBookAsCompleted = async () => {
+    if (hasMarkedCompleted.current) return;
+    hasMarkedCompleted.current = true;
+    saveProgress.cancel();
+    try {
+      await axios.delete(`/bookshelf/books/${bookId}?status=READING`);
+      return;
+    } catch (error) {
+      console.error("Lỗi xóa sách:", error);
+      hasMarkedCompleted.current = false;
+    }
+  };
 
-  // B. Sự kiện cuộn (Đã thêm chặn khi đang restore)
   const handleScroll = (e) => {
-    if (isRestoring.current) return;
+    if (isRestoring.current || hasMarkedCompleted.current) return;
     if (!isAuthenticated || !selectedChapter) return;
     const target = e.target;
     const { scrollTop, scrollHeight, clientHeight } = target;
     if (scrollHeight - clientHeight <= 0) return;
     const scrolledPercent = (scrollTop / (scrollHeight - clientHeight)) * 100;
-    saveProgress(bookId, selectedChapter.id, scrolledPercent);
+    const currentIndex = getCurrentChapterIndex();
+    const isLastChapter = currentIndex === chapters.length - 1;
+
+    if (isLastChapter && scrolledPercent > 95) {
+      markBookAsCompleted();
+    } else {
+      saveProgress(bookId, selectedChapter.id, scrolledPercent);
+    }
   };
 
   const getCurrentChapterIndex = () => {
@@ -206,30 +226,45 @@ export default function ReadBookPage() {
     return chapters.findIndex(ch => ch.id === selectedChapter.id);
   };
 
+  const handleSelectChapter = (ch) => {
+    if (ch.isLocked) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    setInitialScrollPos(0);
+    setSelectedChapter(ch);
+  };
+
   const handlePrevChapter = () => {
     const idx = getCurrentChapterIndex();
-    if (idx > 0) setSelectedChapter(chapters[idx - 1]);
+    if (idx > 0) {
+      setInitialScrollPos(0);
+      setSelectedChapter(chapters[idx - 1]);
+    }
   };
 
   const handleNextChapter = () => {
     const idx = getCurrentChapterIndex();
-    if (idx >= 0 && idx < chapters.length - 1) setSelectedChapter(chapters[idx + 1]);
+    if (idx >= 0 && idx < chapters.length - 1) {
+      const nextChapter = chapters[idx + 1];
+      if (nextChapter.isLocked) {
+        setShowUpgradeModal(true);
+        return;
+      }
+      setInitialScrollPos(0);
+      setSelectedChapter(nextChapter);
+    }
   };
 
   const handleSummarize = async () => {
     if (!selectedChapter || !selectedChapter.content) return;
 
     setShowSummary(true);
-    // If we already have a summary for this chapter (could cache it later, but for now simple)
-    // Actually, let's just fetch every time or check if text is empty? 
-    // Ideally we clear text when chapter changes.
-    // For now, allow re-summarizing.
-
     setIsSummarizing(true);
     setSummaryText("");
 
     try {
-      const response = await axios.post("/summary", { // Using the new summary route
+      const response = await axios.post("/summary", {
         text: selectedChapter.content
       });
 
@@ -276,10 +311,11 @@ export default function ReadBookPage() {
             {chapters.map((ch, index) => (
               <button
                 key={ch.id || index}
-                onClick={() => setSelectedChapter(ch)}
+                onClick={() => handleSelectChapter(ch)}
                 className={`w-full text-left px-4 py-3 text-sm rounded-md transition-colors duration-200 mb-1 ${selectedChapter?.id === ch.id ? 'bg-blue-50 text-blue-700 font-semibold border-l-4 border-blue-600' : 'text-slate-600 hover:bg-slate-100 border-l-4 border-transparent'}`}
               >
                 <span className="line-clamp-2">{ch.title || `Chương ${index + 1}`}</span>
+                {ch.isLocked && <Lock className="h-3 w-3 text-slate-400 shrink-0 ml-2" />}
               </button>
             ))}
           </div>
@@ -333,11 +369,11 @@ export default function ReadBookPage() {
                   </article>
 
                   <div className="mt-12 pt-8 border-t border-slate-200 flex items-center justify-between gap-4">
-                    <Button variant="outline" onClick={handlePrevChapter} disabled={currentIndex <= 0} className="flex gap-2">
+                    <Button variant="outline" onClick={handlePrevChapter} disabled={currentIndex <= 0} className="flex gap-2 hover:bg-gray-100">
                       <ChevronLeft className="h-4 w-4" /> Trước
                     </Button>
                     <div className="text-sm text-slate-500">Trang {currentIndex + 1} / {chapters.length}</div>
-                    <Button variant="outline" onClick={handleNextChapter} disabled={currentIndex >= chapters.length - 1} className="flex gap-2">
+                    <Button variant="outline" onClick={handleNextChapter} disabled={currentIndex >= chapters.length - 1} className="flex gap-2 hover:bg-gray-100">
                       Sau <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
@@ -346,39 +382,72 @@ export default function ReadBookPage() {
             </div>
           </div>
         </div>
-
-        {showAudioPlayer && selectedChapter && (
-          <AudioPlayer
-            text={selectedChapter.content}
-            onClose={() => setShowAudioPlayer(false)}
-          />
-        )}
-
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-purple-700">
-                <Sparkles className="h-5 w-5" />
-                Tóm tắt nội dung
-              </DialogTitle>
-              <DialogDescription>
-                Tóm tắt chương: {selectedChapter?.title}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="flex-1 overflow-y-auto p-4 bg-slate-50 rounded-md border text-slate-700 leading-relaxed whitespace-pre-line min-h-[200px]">
-              {isSummarizing ? (
-                <div className="h-full flex flex-col items-center justify-center gap-3 text-slate-500">
-                  <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
-                  <p>AI đang đọc và tóm tắt...</p>
-                </div>
-              ) : (
-                summaryText || "Không có nội dung tóm tắt."
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      </main>
+      </>
+      ) : <div className="text-center text-slate-400 py-20">Vui lòng chọn chương</div>}
     </div>
+          </div >
+        </div >
+
+    { showAudioPlayer && selectedChapter && (
+      <AudioPlayer
+        text={selectedChapter.content}
+        onClose={() => setShowAudioPlayer(false)}
+      />
+    )
+}
+
+<Dialog open={showSummary} onOpenChange={setShowSummary}>
+  <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+    <DialogHeader>
+      <DialogTitle className="flex items-center gap-2 text-purple-700">
+        <Sparkles className="h-5 w-5" />
+        Tóm tắt nội dung
+      </DialogTitle>
+      <DialogDescription>
+        Tóm tắt chương: {selectedChapter?.title}
+      </DialogDescription>
+    </DialogHeader>
+
+    <div className="flex-1 overflow-y-auto p-4 bg-slate-50 rounded-md border text-slate-700 leading-relaxed whitespace-pre-line min-h-[200px]">
+      {isSummarizing ? (
+        <div className="h-full flex flex-col items-center justify-center gap-3 text-slate-500">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+          <p>AI đang đọc và tóm tắt...</p>
+        </div>
+      ) : (
+        summaryText || "Không có nội dung tóm tắt."
+      )}
+    </div>
+  </DialogContent>
+</Dialog>
+      </main >
+  <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+    <DialogContent className="sm:max-w-md">
+      <DialogHeader>
+        <div className="mx-auto bg-yellow-100 p-3 rounded-full w-fit mb-2">
+          <Lock className="h-6 w-6 text-yellow-600" />
+        </div>
+        <DialogTitle className="text-center text-xl">
+          Nội dung dành cho Hội viên
+        </DialogTitle>
+        <DialogDescription className="text-center pt-2">
+          Bạn đã đọc hết 3 chương đọc thử miễn phí của cuốn sách này. <br />
+          Hãy nâng cấp lên gói <strong>Premium</strong> để mở khóa toàn bộ nội dung và tận hưởng kho sách không giới hạn!
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter className="sm:justify-center mt-4 gap-2 sm:gap-0">
+        <Button variant="outline" onClick={() => setShowUpgradeModal(false)} className="hover:bg-gray-200">
+          Để sau
+        </Button>
+        <Button
+          className="bg-yellow-500 hover:bg-yellow-600 text-white"
+          onClick={() => navigate('/membership')} // Điều hướng đến trang mua gói
+        >
+          Nâng cấp ngay
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+    </div >
   );
 }
