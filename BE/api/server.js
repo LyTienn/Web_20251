@@ -13,6 +13,8 @@ import commentRoutes from "./routes/comment-route.js";
 import bookshelfRoutes, { bookshelfAdminRouter } from "./routes/bookshelf-route.js";
 import paymentRoute from "./routes/payment-route.js";
 import statsRoutes from "./routes/stats-route.js";
+import summaryRoutes from "./routes/summary-route.js";
+import ttsRoutes from "./routes/tts-route.js";
 
 dotenv.config();
 
@@ -22,7 +24,9 @@ const DB_SYNC = process.env.DB_SYNC || "alter"; // options: 'alter' | 'force' | 
 
 // Middleware
 // Allow FE dev servers on ports 5173 and 5174
-const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : ["http://localhost:5173", "http://localhost:5174"];
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -51,6 +55,8 @@ app.use("/api/bookshelf", bookshelfRoutes);
 app.use("/api/admin/bookshelf", bookshelfAdminRouter);
 app.use("/api/admin/stats", statsRoutes);
 app.use("/api/payment", paymentRoute);
+app.use("/api/summary", summaryRoutes);
+app.use("/api/tts", ttsRoutes);
 
 app.get("/api/health", async (req, res) => {
   try {

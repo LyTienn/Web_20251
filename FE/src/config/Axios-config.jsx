@@ -9,7 +9,7 @@ export const injectStore = (_store) => {
 };
 
 const instance = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -21,7 +21,7 @@ const instance = axios.create({
 instance.interceptors.request.use(
   function (config) {
     if (import.meta.env.DEV) {
-        console.log(`Request: ${config.method.toUpperCase()} ${config.url}`);
+      console.log(`Request: ${config.method.toUpperCase()} ${config.url}`);
     }
     return config;
   },
@@ -33,7 +33,7 @@ instance.interceptors.request.use(
 // Response interceptor
 instance.interceptors.response.use(
   (response) => {
-    return response.data; 
+    return response.data;
   },
   async (error) => {
     const originalRequest = error.config;

@@ -2,11 +2,19 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, List, FileText, ChevronLeft, ArrowLeft } from "lucide-react";
+import { ChevronRight, List, FileText, ChevronLeft, ArrowLeft, Headphones, Sparkles, Loader2 } from "lucide-react";
 import Header from "@/components/HeaderBar";
 import { toast } from "react-toastify";
 import axios from "@/config/Axios-config";
 import { debounce } from "lodash";
+import AudioPlayer from "@/components/AudioPlayer";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 export default function ReadBookPage() {
   const { id: bookId } = useParams();
@@ -18,6 +26,13 @@ export default function ReadBookPage() {
   const [selectedChapter, setSelectedChapter] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [initialScrollPos, setInitialScrollPos] = useState(0);
+  const [showAudioPlayer, setShowAudioPlayer] = useState(false);
+
+  // Summary State
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaryText, setSummaryText] = useState("");
+  const [isSummarizing, setIsSummarizing] = useState(false);
+
   const isRestoring = useRef(false);
 
   const contentRef = useRef(null);
@@ -25,20 +40,20 @@ export default function ReadBookPage() {
   const saveProgress = useRef(
     debounce(async (bId, cId, scrollPercent) => {
       try {
-        await axios.put(`/bookshelf/books/${bId}/progress`, { 
-            chapterId: cId,
-            scrollPosition: scrollPercent 
+        await axios.put(`/bookshelf/books/${bId}/progress`, {
+          chapterId: cId,
+          scrollPosition: scrollPercent
         });
 
       } catch (error) {
         console.error("❌ Lỗi lưu tiến độ:", error);
       }
-    }, 1000) 
+    }, 1000)
   ).current;
 
   useEffect(() => {
     return () => {
-      saveProgress.cancel(); 
+      saveProgress.cancel();
     };
   }, [saveProgress]);
 
@@ -53,9 +68,9 @@ export default function ReadBookPage() {
     if (bookId && isAuthenticated) {
       const initReadingStatus = async () => {
         try {
-          await axios.post(`/bookshelf/books/${bookId}`, { 
-              bookId: bookId, 
-              status: 'READING' 
+          await axios.post(`/bookshelf/books/${bookId}`, {
+            bookId: bookId,
+            status: 'READING'
           });
         } catch (error) {
           console.log("Sách đã có trong tủ");
@@ -84,43 +99,43 @@ export default function ReadBookPage() {
       try {
         setLoading(true);
         const [resChapters, resProgress] = await Promise.all([
-            axios.get(`/books/${bookId}/chapters`),
-            isAuthenticated ? axios.get(`/bookshelf/books/${bookId}/progress`).catch(() => null) : null
+          axios.get(`/books/${bookId}/chapters`),
+          isAuthenticated ? axios.get(`/bookshelf/books/${bookId}/progress`).catch(() => null) : null
         ]);
 
         let finalChapters = [];
-        const rawChaps = resChapters; 
+        const rawChaps = resChapters;
         if (Array.isArray(rawChaps)) finalChapters = rawChaps;
         else if (rawChaps.data && Array.isArray(rawChaps.data)) finalChapters = rawChaps.data;
-        else if (rawChaps.data?.data && Array.isArray(rawChaps.data.data)) finalChapters = rawChaps.data.data;      
+        else if (rawChaps.data?.data && Array.isArray(rawChaps.data.data)) finalChapters = rawChaps.data.data;
         setChapters(finalChapters);
 
         let chapterToLoad = null;
         let scrollPosToLoad = 0;
 
         if (resProgress && resProgress.data) {
-            const { lastChapterId, lastReadScrollPosition } = resProgress.data;
-            
-            if (lastChapterId) {
-                chapterToLoad = finalChapters.find(ch => ch.id === lastChapterId);
-                if (lastReadScrollPosition) {
-                    scrollPosToLoad = lastReadScrollPosition;
-                }
+          const { lastChapterId, lastReadScrollPosition } = resProgress.data;
+
+          if (lastChapterId) {
+            chapterToLoad = finalChapters.find(ch => ch.id === lastChapterId);
+            if (lastReadScrollPosition) {
+              scrollPosToLoad = lastReadScrollPosition;
             }
+          }
         }
 
         if (!chapterToLoad && finalChapters.length > 0) {
-            chapterToLoad = finalChapters[0];
+          chapterToLoad = finalChapters[0];
         }
 
         setSelectedChapter(chapterToLoad);
-        setInitialScrollPos(scrollPosToLoad); 
+        setInitialScrollPos(scrollPosToLoad);
 
         if (chapterToLoad && resProgress?.data?.lastChapterId) {
-             toast.info(`Đọc tiếp: ${chapterToLoad.title}`, { 
-                 autoClose: 2000, 
-                 toastId: 'resume-toast' 
-             });
+          toast.info(`Đọc tiếp: ${chapterToLoad.title}`, {
+            autoClose: 2000,
+            toastId: 'resume-toast'
+          });
         }
 
       } catch (err) {
@@ -135,11 +150,11 @@ export default function ReadBookPage() {
   }, [bookId, isAuthenticated]);
 
   useEffect(() => {
-    if (selectedChapter?.id && selectedChapter?.content && contentRef.current) {       
+    if (selectedChapter?.id && selectedChapter?.content && contentRef.current) {
       if (initialScrollPos > 0) {
-        isRestoring.current = true; 
+        isRestoring.current = true;
         let attempts = 0;
-        const maxAttempts = 20;    
+        const maxAttempts = 20;
         const tryRestoringScroll = () => {
           const element = contentRef.current;
           if (!element) return;
@@ -147,42 +162,42 @@ export default function ReadBookPage() {
           const clientHeight = element.clientHeight;
           if (scrollHeight <= clientHeight && attempts < maxAttempts) {
             attempts++;
-            requestAnimationFrame(tryRestoringScroll); 
+            requestAnimationFrame(tryRestoringScroll);
             return;
           }
           const targetPixel = (initialScrollPos / 100) * (scrollHeight - clientHeight);
-                 
+
           if (targetPixel > 0) {
             element.scrollTo({ top: targetPixel, behavior: 'auto' });
             if (Math.abs(element.scrollTop - targetPixel) < 20) {
               setInitialScrollPos(0);
               setTimeout(() => { isRestoring.current = false; }, 500);
-              } else if (attempts < maxAttempts) {
-                attempts++;
-                setTimeout(tryRestoringScroll, 50);
-              } else {
-                isRestoring.current = false;
-              }
-          } else {
+            } else if (attempts < maxAttempts) {
+              attempts++;
+              setTimeout(tryRestoringScroll, 50);
+            } else {
               isRestoring.current = false;
             }
+          } else {
+            isRestoring.current = false;
+          }
         };
-        tryRestoringScroll();     
-        } else {
-            contentRef.current.scrollTo({ top: 0, behavior: 'auto' });
-        }
+        tryRestoringScroll();
+      } else {
+        contentRef.current.scrollTo({ top: 0, behavior: 'auto' });
+      }
     }
   }, [selectedChapter?.id, selectedChapter?.content, initialScrollPos]);
 
 
   // B. Sự kiện cuộn (Đã thêm chặn khi đang restore)
   const handleScroll = (e) => {
-    if (isRestoring.current) return; 
-    if (!isAuthenticated || !selectedChapter) return;    
+    if (isRestoring.current) return;
+    if (!isAuthenticated || !selectedChapter) return;
     const target = e.target;
-    const { scrollTop, scrollHeight, clientHeight } = target;    
+    const { scrollTop, scrollHeight, clientHeight } = target;
     if (scrollHeight - clientHeight <= 0) return;
-    const scrolledPercent = (scrollTop / (scrollHeight - clientHeight)) * 100;  
+    const scrolledPercent = (scrollTop / (scrollHeight - clientHeight)) * 100;
     saveProgress(bookId, selectedChapter.id, scrolledPercent);
   };
 
@@ -201,6 +216,35 @@ export default function ReadBookPage() {
     if (idx >= 0 && idx < chapters.length - 1) setSelectedChapter(chapters[idx + 1]);
   };
 
+  const handleSummarize = async () => {
+    if (!selectedChapter || !selectedChapter.content) return;
+
+    setShowSummary(true);
+    // If we already have a summary for this chapter (could cache it later, but for now simple)
+    // Actually, let's just fetch every time or check if text is empty? 
+    // Ideally we clear text when chapter changes.
+    // For now, allow re-summarizing.
+
+    setIsSummarizing(true);
+    setSummaryText("");
+
+    try {
+      const response = await axios.post("/summary", { // Using the new summary route
+        text: selectedChapter.content
+      });
+
+      if (response && response.summary) {
+        setSummaryText(response.summary);
+      }
+    } catch (error) {
+      console.error("Summary error:", error);
+      setSummaryText("Không thể tạo tóm tắt vào lúc này. Vui lòng thử lại sau.");
+      toast.error("Lỗi khi tạo tóm tắt");
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
   if (!book) return <div className="min-h-screen bg-background"><Header /><div className="container mx-auto p-4">Đang tải...</div></div>;
 
   const currentIndex = getCurrentChapterIndex();
@@ -209,51 +253,75 @@ export default function ReadBookPage() {
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <aside className={`bg-white border-r border-slate-200 shrink-0 transition-all duration-300 ease-in-out flex flex-col ${sidebarOpen ? 'w-80 translate-x-0' : 'w-12'} `}>
         <div className="h-14 border-b flex items-center justify-between px-3 bg-slate-50">
-            {sidebarOpen ? (
-                <>
-                    <h2 className="font-bold text-slate-800 flex items-center gap-2 truncate">
-                        <FileText className="h-4 w-4" /> Mục lục
-                    </h2>
-                    <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
-                        <List className="h-5 w-5 text-slate-600" />
-                    </Button>
-                </>
-            ) : (
-                <div className="w-full flex justify-center">
-                    <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
-                        <List className="h-5 w-5 text-slate-600" />
-                    </Button>
-                </div>
-            )}
-        </div>
-        
-        {sidebarOpen && (
-            <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
-                {chapters.map((ch, index) => (
-                    <button
-                        key={ch.id || index}
-                        onClick={() => setSelectedChapter(ch)}
-                        className={`w-full text-left px-4 py-3 text-sm rounded-md transition-colors duration-200 mb-1 ${selectedChapter?.id === ch.id ? 'bg-blue-50 text-blue-700 font-semibold border-l-4 border-blue-600' : 'text-slate-600 hover:bg-slate-100 border-l-4 border-transparent'}`}
-                    >
-                        <span className="line-clamp-2">{ch.title || `Chương ${index + 1}`}</span>
-                    </button>
-                ))}
+          {sidebarOpen ? (
+            <>
+              <h2 className="font-bold text-slate-800 flex items-center gap-2 truncate">
+                <FileText className="h-4 w-4" /> Mục lục
+              </h2>
+              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
+                <List className="h-5 w-5 text-slate-600" />
+              </Button>
+            </>
+          ) : (
+            <div className="w-full flex justify-center">
+              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+                <List className="h-5 w-5 text-slate-600" />
+              </Button>
             </div>
+          )}
+        </div>
+
+        {sidebarOpen && (
+          <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+            {chapters.map((ch, index) => (
+              <button
+                key={ch.id || index}
+                onClick={() => setSelectedChapter(ch)}
+                className={`w-full text-left px-4 py-3 text-sm rounded-md transition-colors duration-200 mb-1 ${selectedChapter?.id === ch.id ? 'bg-blue-50 text-blue-700 font-semibold border-l-4 border-blue-600' : 'text-slate-600 hover:bg-slate-100 border-l-4 border-transparent'}`}
+              >
+                <span className="line-clamp-2">{ch.title || `Chương ${index + 1}`}</span>
+              </button>
+            ))}
+          </div>
         )}
       </aside>
 
-      <main className="flex-1 flex flex-col min-w-0 bg-white h-full">
+      <main className="flex-1 flex flex-col min-w-0 bg-white h-full relative">
         <div className="h-14 border-b bg-white flex items-center px-4 justify-between shadow-sm z-10 shrink-0">
-            <div className="flex items-center gap-3">
-                <Link to={`/book/${book.id}`}><Button variant="ghost" size="sm"><ArrowLeft /></Button></Link>
-                <h1 className="font-semibold text-slate-800 truncate max-w-[200px] sm:max-w-md ml-2">{book.title}</h1>
+          <div className="flex items-center gap-3">
+            <Link to={`/book/${book.id}`}><Button variant="ghost" size="sm"><ArrowLeft /></Button></Link>
+            <h1 className="font-semibold text-slate-800 truncate max-w-[200px] sm:max-w-md ml-2">{book.title}</h1>
+          </div>
+
+          {selectedChapter && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
+                onClick={handleSummarize}
+              >
+                <Sparkles className="h-4 w-4" />
+                <span className="hidden sm:inline">Tóm tắt AI</span>
+              </Button>
+
+              <Button
+                variant={showAudioPlayer ? "secondary" : "outline"}
+                size="sm"
+                className="gap-2"
+                onClick={() => setShowAudioPlayer(!showAudioPlayer)}
+              >
+                <Headphones className="h-4 w-4" />
+                <span className="hidden sm:inline">Phát Audio</span>
+              </Button>
             </div>
+          )}
         </div>
 
-        <div 
-            ref={contentRef} 
-            onScroll={handleScroll} 
-            className="flex-1 overflow-y-auto bg-slate-50"
+        <div
+          ref={contentRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto bg-slate-50"
         >
           <div className="min-h-full w-full flex justify-center p-6 sm:p-10 md:p-14">
             <div className="w-full max-w-3xl bg-white shadow-sm border border-slate-100 rounded-lg p-8 sm:p-12 h-fit">
@@ -263,14 +331,14 @@ export default function ReadBookPage() {
                     <h2 className="text-3xl font-bold mb-6 text-slate-900 border-b pb-4">{selectedChapter.title}</h2>
                     <div className="whitespace-pre-line text-slate-700 leading-relaxed text-justify font-serif text-lg">{selectedChapter.content}</div>
                   </article>
-                  
+
                   <div className="mt-12 pt-8 border-t border-slate-200 flex items-center justify-between gap-4">
                     <Button variant="outline" onClick={handlePrevChapter} disabled={currentIndex <= 0} className="flex gap-2">
-                        <ChevronLeft className="h-4 w-4" /> Trước
+                      <ChevronLeft className="h-4 w-4" /> Trước
                     </Button>
                     <div className="text-sm text-slate-500">Trang {currentIndex + 1} / {chapters.length}</div>
                     <Button variant="outline" onClick={handleNextChapter} disabled={currentIndex >= chapters.length - 1} className="flex gap-2">
-                        Sau <ChevronRight className="h-4 w-4" />
+                      Sau <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
                 </>
@@ -278,6 +346,38 @@ export default function ReadBookPage() {
             </div>
           </div>
         </div>
+
+        {showAudioPlayer && selectedChapter && (
+          <AudioPlayer
+            text={selectedChapter.content}
+            onClose={() => setShowAudioPlayer(false)}
+          />
+        )}
+
+        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+          <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-purple-700">
+                <Sparkles className="h-5 w-5" />
+                Tóm tắt nội dung
+              </DialogTitle>
+              <DialogDescription>
+                Tóm tắt chương: {selectedChapter?.title}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto p-4 bg-slate-50 rounded-md border text-slate-700 leading-relaxed whitespace-pre-line min-h-[200px]">
+              {isSummarizing ? (
+                <div className="h-full flex flex-col items-center justify-center gap-3 text-slate-500">
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                  <p>AI đang đọc và tóm tắt...</p>
+                </div>
+              ) : (
+                summaryText || "Không có nội dung tóm tắt."
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

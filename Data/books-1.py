@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 # CẤU HÌNH CHẠY (USER SETTINGS)
 # =============================================================================
 # Số lượng sách muốn lấy (đặt số nhỏ để test, số lớn để chạy thật)
-MAX_BOOKS_TO_FETCH = 1000
+MAX_BOOKS_TO_FETCH = int(os.getenv("MAX_BOOKS_TO_FETCH", "100"))
 
 # Tiếp tục chạy nếu gặp lỗi khi xử lý một cuốn sách (True/False)
 CONTINUE_ON_ERROR = True
