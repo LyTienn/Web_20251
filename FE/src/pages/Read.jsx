@@ -313,11 +313,11 @@ export default function ReadBookPage() {
                   </article>
                   
                   <div className="mt-12 pt-8 border-t border-slate-200 flex items-center justify-between gap-4">
-                    <Button variant="outline" onClick={handlePrevChapter} disabled={currentIndex <= 0} className="flex gap-2">
+                    <Button variant="outline" onClick={handlePrevChapter} disabled={currentIndex <= 0} className="flex gap-2 hover:bg-gray-100">
                         <ChevronLeft className="h-4 w-4" /> Trước
                     </Button>
                     <div className="text-sm text-slate-500">Trang {currentIndex + 1} / {chapters.length}</div>
-                    <Button variant="outline" onClick={handleNextChapter} disabled={currentIndex >= chapters.length - 1} className="flex gap-2">
+                    <Button variant="outline" onClick={handleNextChapter} disabled={currentIndex >= chapters.length - 1} className="flex gap-2 hover:bg-gray-100">
                         Sau <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
@@ -342,7 +342,7 @@ export default function ReadBookPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-center mt-4 gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowUpgradeModal(false)}>
+            <Button variant="outline" onClick={() => setShowUpgradeModal(false)} className="hover:bg-gray-200">
               Để sau
             </Button>
             <Button 
