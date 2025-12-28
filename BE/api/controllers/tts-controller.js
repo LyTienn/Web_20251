@@ -3,6 +3,8 @@ import cloudinary from "../config/cloudinary-config.js";
 import { Readable } from 'stream';
 import Chapter from "../models/chapter-model.js";
 
+import wav from 'wav';
+
 export const generateSpeech = async (req, res) => {
     try {
         const { text, voiceName = 'Kore', chapterId } = req.body;
@@ -43,7 +45,7 @@ export const generateSpeech = async (req, res) => {
         const ai = new GoogleGenAI({ apiKey });
 
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash-preview-tts",
+            model: "gemini-2.5-pro-preview-tts",
             contents: [{ parts: [{ text: textToSpeak }] }],
             config: {
                 responseModalities: ['AUDIO'],
@@ -63,13 +65,14 @@ export const generateSpeech = async (req, res) => {
 
         const audioBuffer = Buffer.from(data, 'base64');
 
-        // 5. Upload to Cloudinary
-        const uploadStream = (buffer) => {
+        // 5. Upload to Cloudinary (Convert PCM to WAV stream)
+        const uploadStream = () => {
             return new Promise((resolve, reject) => {
-                const stream = cloudinary.uploader.upload_stream(
+                // Cloudinary upload stream
+                const cloudStream = cloudinary.uploader.upload_stream(
                     {
                         folder: "tts_audio",
-                        resource_type: "auto",
+                        resource_type: "video", // Important for audio on Cloudinary
                         public_id: `chapter_${chapterId || 'temp'}_${voiceName}_${Date.now()}`
                     },
                     (error, result) => {
@@ -77,11 +80,23 @@ export const generateSpeech = async (req, res) => {
                         resolve(result);
                     }
                 );
-                Readable.from(buffer).pipe(stream);
+
+                // Wav Writer to convert PCM to WAV format
+                const wavWriter = new wav.Writer({
+                    channels: 1,
+                    sampleRate: 24000,
+                    bitDepth: 16
+                });
+
+                // Pipe Wav Writer -> Cloudinary Stream
+                wavWriter.pipe(cloudStream);
+
+                // Write PCM data to Wav Writer
+                wavWriter.end(audioBuffer);
             });
         };
 
-        const result = await uploadStream(audioBuffer);
+        const result = await uploadStream();
         const audioUrl = result.secure_url;
 
         // 6. Update Database if chapterId exists

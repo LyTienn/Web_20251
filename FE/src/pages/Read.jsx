@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
-<<<<<<< HEAD
+
 import { ChevronRight, List, FileText, ChevronLeft, ArrowLeft, Headphones, Sparkles, Loader2, Lock } from "lucide-react";
 import Header from "@/components/HeaderBar";
 import { toast } from "react-toastify";
@@ -382,72 +382,68 @@ export default function ReadBookPage() {
             </div>
           </div>
         </div>
-      </>
-      ) : <div className="text-center text-slate-400 py-20">Vui lòng chọn chương</div>}
-    </div>
-          </div >
-        </div >
 
-    { showAudioPlayer && selectedChapter && (
-      <AudioPlayer
-        text={selectedChapter.content}
-        onClose={() => setShowAudioPlayer(false)}
-      />
-    )
-}
 
-<Dialog open={showSummary} onOpenChange={setShowSummary}>
-  <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-    <DialogHeader>
-      <DialogTitle className="flex items-center gap-2 text-purple-700">
-        <Sparkles className="h-5 w-5" />
-        Tóm tắt nội dung
-      </DialogTitle>
-      <DialogDescription>
-        Tóm tắt chương: {selectedChapter?.title}
-      </DialogDescription>
-    </DialogHeader>
+        {showAudioPlayer && selectedChapter && (
+          <AudioPlayer
+            text={selectedChapter.content}
+            onClose={() => setShowAudioPlayer(false)}
+          />
+        )
+        }
 
-    <div className="flex-1 overflow-y-auto p-4 bg-slate-50 rounded-md border text-slate-700 leading-relaxed whitespace-pre-line min-h-[200px]">
-      {isSummarizing ? (
-        <div className="h-full flex flex-col items-center justify-center gap-3 text-slate-500">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
-          <p>AI đang đọc và tóm tắt...</p>
-        </div>
-      ) : (
-        summaryText || "Không có nội dung tóm tắt."
-      )}
-    </div>
-  </DialogContent>
-</Dialog>
+        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+          <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-purple-700">
+                <Sparkles className="h-5 w-5" />
+                Tóm tắt nội dung
+              </DialogTitle>
+              <DialogDescription>
+                Tóm tắt chương: {selectedChapter?.title}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto p-4 bg-slate-50 rounded-md border text-slate-700 leading-relaxed whitespace-pre-line min-h-[200px]">
+              {isSummarizing ? (
+                <div className="h-full flex flex-col items-center justify-center gap-3 text-slate-500">
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                  <p>AI đang đọc và tóm tắt...</p>
+                </div>
+              ) : (
+                summaryText || "Không có nội dung tóm tắt."
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </main >
-  <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
-    <DialogContent className="sm:max-w-md">
-      <DialogHeader>
-        <div className="mx-auto bg-yellow-100 p-3 rounded-full w-fit mb-2">
-          <Lock className="h-6 w-6 text-yellow-600" />
-        </div>
-        <DialogTitle className="text-center text-xl">
-          Nội dung dành cho Hội viên
-        </DialogTitle>
-        <DialogDescription className="text-center pt-2">
-          Bạn đã đọc hết 3 chương đọc thử miễn phí của cuốn sách này. <br />
-          Hãy nâng cấp lên gói <strong>Premium</strong> để mở khóa toàn bộ nội dung và tận hưởng kho sách không giới hạn!
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter className="sm:justify-center mt-4 gap-2 sm:gap-0">
-        <Button variant="outline" onClick={() => setShowUpgradeModal(false)} className="hover:bg-gray-200">
-          Để sau
-        </Button>
-        <Button
-          className="bg-yellow-500 hover:bg-yellow-600 text-white"
-          onClick={() => navigate('/membership')} // Điều hướng đến trang mua gói
-        >
-          Nâng cấp ngay
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+      <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto bg-yellow-100 p-3 rounded-full w-fit mb-2">
+              <Lock className="h-6 w-6 text-yellow-600" />
+            </div>
+            <DialogTitle className="text-center text-xl">
+              Nội dung dành cho Hội viên
+            </DialogTitle>
+            <DialogDescription className="text-center pt-2">
+              Bạn đã đọc hết 3 chương đọc thử miễn phí của cuốn sách này. <br />
+              Hãy nâng cấp lên gói <strong>Premium</strong> để mở khóa toàn bộ nội dung và tận hưởng kho sách không giới hạn!
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center mt-4 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowUpgradeModal(false)} className="hover:bg-gray-200">
+              Để sau
+            </Button>
+            <Button
+              className="bg-yellow-500 hover:bg-yellow-600 text-white"
+              onClick={() => navigate('/membership')} // Điều hướng đến trang mua gói
+            >
+              Nâng cấp ngay
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div >
   );
 }

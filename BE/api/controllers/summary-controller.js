@@ -52,17 +52,28 @@ export const summarizeChapter = async (req, res) => {
             contents: `Summarize the following book chapter in a concise manner (${language}):\n\n${textToSummarize}`,
         });
 
-        if (response && response.text) {
-            const summaryText = response.text;
-
-            // 5. Update Database if chapterId exists
-            if (chapterId) {
-                await Chapter.update({ summary: summaryText }, { where: { id: chapterId } });
+        if (response) {
+            let summaryText = "";
+            if (typeof response.text === 'function') {
+                summaryText = response.text();
+            } else if (response.text) {
+                summaryText = response.text;
+            } else if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
+                summaryText = response.candidates[0].content.parts[0].text;
             }
 
-            res.status(200).json({ summary: summaryText, message: "Summary generated and saved" });
+            if (summaryText) {
+                // 5. Update Database if chapterId exists
+                if (chapterId) {
+                    await Chapter.update({ summary: summaryText }, { where: { id: chapterId } });
+                }
+
+                res.status(200).json({ summary: summaryText, message: "Summary generated and saved" });
+            } else {
+                res.status(500).json({ message: "Failed to generate summary: Empty response" });
+            }
         } else {
-            res.status(500).json({ message: "Failed to generate summary" });
+            res.status(500).json({ message: "Failed to generate summary: No response" });
         }
 
     } catch (error) {

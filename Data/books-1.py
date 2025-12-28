@@ -13,22 +13,37 @@ from datetime import datetime, timedelta
 # =============================================================================
 # CẤU HÌNH CHẠY (USER SETTINGS)
 # =============================================================================
-# Số lượng sách muốn lấy (đặt số nhỏ để test, số lớn để chạy thật)
-MAX_BOOKS_TO_FETCH = int(os.getenv("MAX_BOOKS_TO_FETCH", "100"))
+# =============================================================================
+# CẤU HÌNH (Sẽ được nhập từ bàn phím khi chạy)
+# =============================================================================
+MAX_BOOKS_TO_FETCH = 100
+DB_CONFIG = {}
 
-# Tiếp tục chạy nếu gặp lỗi khi xử lý một cuốn sách (True/False)
-CONTINUE_ON_ERROR = True
+def setup_interactive_config():
+    global MAX_BOOKS_TO_FETCH, DB_CONFIG
+    
+    def get_input(label, default):
+        val = input(f"{label} [{default}]: ").strip()
+        return val if val else default
 
-# Thời gian nghỉ giữa các request để tránh bị chặn (giây)
-SLEEP_BETWEEN_REQUESTS = 0.5 
-
-DB_CONFIG = {
-    "dbname": os.getenv("DB_NAME", "CNWEB1"),
-    "user": os.getenv("DB_USER", "postgres"),
-    "password": os.getenv("DB_PASS", "hung2004"),
-    "host": os.getenv("DB_HOST", "localhost"),
-    "port": int(os.getenv("DB_PORT", "5432")),
-}
+    print("\n=== CẤU HÌNH DATA CRAWLER ===")
+    try:
+        MAX_BOOKS_TO_FETCH = int(get_input("Số lượng sách muốn lấy", os.getenv("MAX_BOOKS_TO_FETCH", "100")))
+    except ValueError:
+        print("⚠️ Số lượng không hợp lệ, dùng mặc định 100.")
+        MAX_BOOKS_TO_FETCH = 100
+    
+    print("\n--- Cấu hình Database ---")
+    DB_CONFIG["dbname"] = get_input("Database Name", os.getenv("DB_NAME", "CNWEB1"))
+    DB_CONFIG["user"] = get_input("User", os.getenv("DB_USER", "postgres"))
+    DB_CONFIG["password"] = get_input("Password", os.getenv("DB_PASS", "hung2004"))
+    DB_CONFIG["host"] = get_input("Host", os.getenv("DB_HOST", "localhost"))
+    try:
+        DB_CONFIG["port"] = int(get_input("Port", os.getenv("DB_PORT", "5432")))
+    except ValueError:
+        print("⚠️ Port không hợp lệ, dùng mặc định 5432.")
+        DB_CONFIG["port"] = 5432
+    print("==============================\n")
 
 
 def connect_db():
@@ -235,6 +250,18 @@ def create_tables(conn):
         cur.execute("ALTER TABLE user_bookshelf ADD COLUMN IF NOT EXISTS last_read_chapter_id INTEGER")
         cur.execute("ALTER TABLE user_bookshelf ADD COLUMN IF NOT EXISTS last_read_at TIMESTAMP")
         cur.execute("ALTER TABLE user_bookshelf ADD COLUMN IF NOT EXISTS last_read_scroll_position FLOAT DEFAULT 0")
+
+        # Fix Primary Key to include 'status' if it's missing (Migration for old backups)
+        cur.execute("""
+            SELECT count(*)
+            FROM information_schema.constraint_column_usage
+            WHERE table_name = 'user_bookshelf'
+              AND constraint_name = 'user_bookshelf_pkey'
+              AND column_name = 'status';
+        """)
+        if cur.fetchone()[0] == 0:
+            cur.execute("ALTER TABLE user_bookshelf DROP CONSTRAINT user_bookshelf_pkey;")
+            cur.execute("ALTER TABLE user_bookshelf ADD PRIMARY KEY (user_id, book_id, status);")
 
         # Subscriptions
         # Status enum
@@ -614,6 +641,7 @@ def seed_subscriptions(conn):
 
 
 def main():
+    setup_interactive_config()
     conn = connect_db()
     create_tables(conn)
     
