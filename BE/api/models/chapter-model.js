@@ -9,6 +9,7 @@ const Chapter = sequelize.define("chapters", {
   content: { type: DataTypes.TEXT },
   audio_links: { type: DataTypes.JSON, defaultValue: [] },
   summary: { type: DataTypes.TEXT },
+  comic_data: { type: DataTypes.JSON, defaultValue: [] }, // Stores [{ url, caption, order }]
 }, {
   freezeTableName: true,
   timestamps: false

@@ -12,6 +12,9 @@ import Chapter from "./chapter-model.js";
 import Bookshelf from "./bookshelf-model.js";
 import BookBookshelf from "./book_bookshelf-model.js";
 import Subscription from "./subscription-model.js"
+import Task from "./task-model.js";
+import Translation from "./translation-model.js";
+import SystemSettings from "./system-settings-model.js";
 
 // Định nghĩa tất cả associations tại ĐÂY
 const setupAssociations = () => {
@@ -69,7 +72,7 @@ const setupAssociations = () => {
     as: "users",
   });
 
-  User.hasMany(UserBookshelf, { foreignKey: "user_id", as: "bookshelfItems", onDelete: 'CASCADE'});
+  User.hasMany(UserBookshelf, { foreignKey: "user_id", as: "bookshelfItems", onDelete: 'CASCADE' });
   UserBookshelf.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
   Book.hasMany(UserBookshelf, { foreignKey: "book_id", as: "bookshelfItems", onDelete: 'CASCADE' });
@@ -82,6 +85,14 @@ const setupAssociations = () => {
   // User - Subscription (One to Many)
   User.hasMany(Subscription, { foreignKey: "user_id", as: "subscriptions" });
   Subscription.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
+  // Task - Chapter
+  Task.belongsTo(Chapter, { foreignKey: "chapter_id", as: "chapter" });
+  Chapter.hasMany(Task, { foreignKey: "chapter_id", as: "tasks" });
+
+  // Chapter - Translation
+  Chapter.hasMany(Translation, { foreignKey: "chapter_id", as: "translations" });
+  Translation.belongsTo(Chapter, { foreignKey: "chapter_id", as: "chapter" });
 };
 
 // Gọi setup associations
@@ -101,6 +112,8 @@ export {
   Bookshelf,
   BookBookshelf,
   Subscription,
+  Task,
+  Translation,
 };
 
 export default {
@@ -116,4 +129,6 @@ export default {
   Bookshelf,
   BookBookshelf,
   Subscription,
+  Task,
+  Translation,
 };

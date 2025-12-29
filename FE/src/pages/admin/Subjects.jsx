@@ -114,6 +114,8 @@ export default function Subjects() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input
+                id="subject-search"
+                name="subject-search"
                 type="text"
                 className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none"
                 placeholder="Tìm kiếm chủ đề..."
@@ -127,6 +129,8 @@ export default function Subjects() {
           <div className="w-full md:w-auto">
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Sắp xếp tên</label>
             <select
+              id="subject-name-sort"
+              name="subject-name-sort"
               className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none min-w-[150px]"
               value={sortConfig.key === 'name' && sortConfig.direction === 'DESC' ? 'NAME_DESC' : 'default-ASC'}
               onChange={(e) => {
@@ -148,6 +152,8 @@ export default function Subjects() {
           <div className="w-full md:w-auto">
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Số lượng sách</label>
             <select
+              id="subject-books-count-sort"
+              name="subject-books-count-sort"
               className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none min-w-[150px]"
               value={sortConfig.key === 'books_count' ? sortConfig.direction : ''}
               onChange={(e) => {
@@ -245,6 +251,8 @@ export default function Subjects() {
               <div>
                 <label className="block text-sm font-medium mb-1">Tên chủ đề <span className="text-red-500">*</span></label>
                 <input
+                  id="subject-name"
+                  name="name"
                   type="text"
                   required
                   className="w-full px-3 py-2 border rounded-md dark:bg-slate-800 dark:border-slate-700"

@@ -13,6 +13,15 @@ import commentRoutes from "./routes/comment-route.js";
 import bookshelfRoutes, { bookshelfAdminRouter } from "./routes/bookshelf-route.js";
 import paymentRoute from "./routes/payment-route.js";
 import statsRoutes from "./routes/stats-route.js";
+import ttsRoutes from "./routes/tts-route.js";
+import summaryRoutes from "./routes/summary-route.js";
+import taskRoutes from "./routes/task-route.js";
+import chatbotRoutes from "./routes/chatbot-route.js";
+import translationRoutes from "./routes/translation-route.js";
+import comicRoutes from "./routes/comic-route.js";
+import subscriptionRoutes from "./routes/subscription-route.js";
+import { initializeVectorStore } from "./services/rag-service.js";
+
 
 dotenv.config();
 
@@ -50,6 +59,18 @@ app.use("/api/comments", commentRoutes);
 app.use("/api/bookshelf", bookshelfRoutes);
 app.use("/api/admin/bookshelf", bookshelfAdminRouter);
 app.use("/api/admin/stats", statsRoutes);
+app.use("/api/tts", ttsRoutes);
+app.use("/api/summary", summaryRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("/api/chatbot", chatbotRoutes);
+app.use("/api/translate", translationRoutes);
+app.use("/api/comic", comicRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
+
+// Public stats route (no auth required)
+import StatsController from "./controllers/stats-controller.js";
+app.get("/api/public/stats", StatsController.getPublicStats);
+
 app.use("/api/payment", paymentRoute);
 
 app.get("/api/health", async (req, res) => {
@@ -130,6 +151,9 @@ const startServer = async () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Health check: http://localhost:${PORT}/api/health`);
     });
+
+    // Initialize RAG Vector Store
+    initializeVectorStore();
   } catch (error) {
     console.error("❌ Unable to start server:", error);
     process.exit(1);

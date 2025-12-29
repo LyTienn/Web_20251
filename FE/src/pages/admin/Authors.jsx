@@ -118,6 +118,8 @@ export default function Authors() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input
+                id="author-search"
+                name="author-search"
                 type="text"
                 className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none"
                 placeholder="Tìm tiêu đề..."
@@ -131,6 +133,8 @@ export default function Authors() {
           <div className="w-full md:w-auto">
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Sắp xếp tên</label>
             <select
+              id="name-sort"
+              name="name-sort"
               className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none min-w-[150px]"
               value={sortConfig.key === 'name' && sortConfig.direction === 'DESC' ? 'NAME_DESC' : 'default-ASC'}
               onChange={(e) => {
@@ -152,6 +156,8 @@ export default function Authors() {
           <div className="w-full md:w-auto">
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Số lượng sách</label>
             <select
+              id="books-count-sort"
+              name="books-count-sort"
               className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none min-w-[150px]"
               value={sortConfig.key === 'books_count' ? sortConfig.direction : ''}
               onChange={(e) => {
@@ -173,6 +179,8 @@ export default function Authors() {
           <div className="w-full md:w-auto">
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Năm sinh</label>
             <select
+              id="birth-year-sort"
+              name="birth-year-sort"
               className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none min-w-[150px]"
               value={sortConfig.key === 'birth_year' ? sortConfig.direction : ''}
               onChange={(e) => {
@@ -287,6 +295,8 @@ export default function Authors() {
               <div>
                 <label className="block text-sm font-medium mb-1">Tên tác giả <span className="text-red-500">*</span></label>
                 <input
+                  id="author-name"
+                  name="name"
                   type="text"
                   required
                   className="w-full px-3 py-2 border rounded-md dark:bg-slate-800 dark:border-slate-700"
@@ -298,6 +308,8 @@ export default function Authors() {
                 <div>
                   <label className="block text-sm font-medium mb-1">Năm sinh</label>
                   <input
+                    id="author-birth-year"
+                    name="birth_year"
                     type="number"
                     className="w-full px-3 py-2 border rounded-md dark:bg-slate-800 dark:border-slate-700"
                     value={formData.birth_year}
@@ -307,6 +319,8 @@ export default function Authors() {
                 <div>
                   <label className="block text-sm font-medium mb-1">Năm mất</label>
                   <input
+                    id="author-death-year"
+                    name="death_year"
                     type="number"
                     className="w-full px-3 py-2 border rounded-md dark:bg-slate-800 dark:border-slate-700"
                     value={formData.death_year}

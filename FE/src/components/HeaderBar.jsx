@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '@/redux/Auth/AuthThunk';
 import Search from './Search';
 import { Button } from "@/components/ui/button";
-import { BookOpen, User, LogOut, Library, LayoutDashboard, Zap, Settings } from "lucide-react"
+import { BookOpen, User, LogOut, Library, LayoutDashboard, Zap, Settings, Crown, Menu, X } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,25 +20,15 @@ const HeaderBar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
-  
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   // Lấy state auth
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-
-//   useEffect(() => {
-//   const fetchProfile = async () => {
-//     const res = await fetch('/profile', {
-//       headers: { Authorization: `Bearer ${token}` }
-//     });
-//     const data = await res.json();
-//     dispatch(setUser(data.data));
-//   };
-//   fetchProfile();
-// }, [token, dispatch]);
 
   const handleLogout = () => {
     dispatch(logoutUser());
     toast.success('Đăng xuất thành công!');
-    navigate('/homepage'); 
+    navigate('/homepage');
   };
 
   useEffect(() => {
@@ -50,7 +40,6 @@ const HeaderBar = () => {
   }, []);
 
   const getSubscriptionText = () => {
-    console.log("Check User Data:", user);
     if (!user) return "";
     if (user.role === "ADMIN") return "Quản trị viên";
     if (user.tier === "PREMIUM") {
@@ -59,40 +48,61 @@ const HeaderBar = () => {
       if (pkg === "3_THANG") return "Hội viên 3 tháng";
       if (pkg === "6_THANG") return "Hội viên 6 tháng";
       if (pkg === "12_THANG") return "Hội viên 1 năm";
-        
-      return "Hội viên Premium"; 
+
+      return "Hội viên Premium";
     }
     return "Gói thường";
   };
 
   return (
     <header
-      className={`border-b sticky top-0 z-50 transition-all duration-300 ${
-        isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
-      }`}
+      className={`border-b sticky top-0 z-50 w-full transition-all duration-300 ${isScrolled ? "bg-white/80 backdrop-blur-md border-slate-200" : "bg-white/50 backdrop-blur-sm border-transparent"
+        }`}
     >
-      <div className='container mx-auto h-16 flex items-center justify-between'>
-        <Link to="/" className='flex items-center gap-2 font-semibold text-lg'>
-          <BookOpen className='h-6 w-6' />
-          <span>Thư Viện Sách</span>
+      <div className='container mx-auto h-16 px-4 flex items-center justify-between'>
+        {/* LOGO */}
+        <Link to="/" className='flex items-center gap-2 group'>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white transition-transform group-hover:scale-105 shadow-md shadow-blue-200">
+            <BookOpen className='h-5 w-5' />
+          </div>
+          <span className='hidden font-serif text-xl font-bold text-slate-800 sm:block'>Thư Viện Sách</span>
         </Link>
-        
-        <nav className="flex items-center gap-4">
 
-          <Search />
-          
-          { isAuthenticated ? (
+        {/* SEARCH BAR - DESKTOP */}
+        <div className="hidden flex-1 max-w-md mx-8 md:block">
+          <Search variant="static" />
+        </div>
+
+        {/* NAVIGATION - DESKTOP */}
+        <nav className="hidden md:flex items-center gap-2">
+          <Button variant="ghost" onClick={() => navigate('/search')} className="text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+            Khám phá
+          </Button>
+
+          {/* Show Premium Button if not premium or guest */}
+          {(!isAuthenticated || (user && user.tier !== "PREMIUM" && user.role !== "ADMIN")) && (
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/membership')}
+              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              Premium
+            </Button>
+          )}
+
+          {isAuthenticated ? (
             <>
-              { user?.role !== "admin" && (
+              {user?.role !== "admin" && user?.tier === "PREMIUM" && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => navigate('/membership')}
-                  className = "hidden sm:flex border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                  className="hidden sm:flex border-amber-500 text-amber-700 bg-amber-50 hover:bg-amber-100"
                 >
-                  <Zap className='h-4 w-4 mr-2 fill-yellow-500' />
+                  <Crown className='h-4 w-4 mr-2 text-amber-600' />
                   {getSubscriptionText()}
-                </Button> 
+                </Button>
               )}
 
               {user?.role === "admin" && (
@@ -106,50 +116,43 @@ const HeaderBar = () => {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 pl-2 pr-2 hover:bg-gray-200 flex items-center gap-2">
-                    <User className="h-4 w-4 mr-2 shrink-0" />
-                    <span 
-                      className="font-medium max-w-20 sm:max-w-[120px] md:max-w-[150px] truncate"
-                      title={user?.fullName || user?.full_name} // Tooltip hiển thị tên đầy đủ khi hover
+                  <Button variant="ghost" size="sm" className="h-9 pl-2 pr-2 hover:bg-slate-100 flex items-center gap-2 rounded-full border border-transparent hover:border-slate-200">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <span
+                      className="font-medium max-w-[100px] truncate text-slate-700 hidden lg:block"
+                      title={user?.fullName || user?.full_name}
                     >
                       {user?.fullName || user?.full_name || "User"}
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
-                
+
                 <DropdownMenuContent align="end" className="w-56 mt-2">
                   <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  
+
                   <DropdownMenuItem disabled>
                     <span className="text-sm text-muted-foreground">
-                      Gói hiện tại: <span className="font-medium text-slate-700">{getSubscriptionText()}</span>
+                      Gói: <span className="font-medium text-slate-700">{getSubscriptionText()}</span>
                     </span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  
+
                   {user?.role !== "admin" && (
-                    <DropdownMenuItem onClick={() => navigate("/bookshelf")} className="cursor-pointer hover:bg-gray-200">
+                    <DropdownMenuItem onClick={() => navigate("/bookshelf")} className="cursor-pointer">
                       <Library className="h-4 w-4 mr-2" />
                       Tủ sách
                     </DropdownMenuItem>
                   )}
-                  
-                  <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer hover:bg-gray-200">
+
+                  <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
                     <Settings className="h-4 w-4 mr-2" />
                     Quản lý tài khoản
                   </DropdownMenuItem>
-                  
+
                   <DropdownMenuSeparator />
-                  
-                  {user?.role !== "member" && (
-                    <>
-                      <DropdownMenuItem onClick={() => navigate("/membership")} className="cursor-pointer hover:bg-gray-200">
-                        Trở thành hội viên
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
 
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer">
                     <LogOut className="h-4 w-4 mr-2" />
@@ -160,22 +163,66 @@ const HeaderBar = () => {
             </>
           ) : (
             <>
-              <Link to="/login">
-                <Button variant="ghost" size="sm" className="hover:bg-slate-200">
-                  Đăng nhập
-                </Button>
-              </Link>
-              <Link to="/register">
-                <Button size="sm" className="bg-slate-900 text-white hover:bg-slate-800">
-                  Đăng ký
-                </Button>
-              </Link>
+              <Button variant="ghost" onClick={() => navigate('/login')} className="hover:bg-slate-100">
+                Đăng nhập
+              </Button>
+              <Button onClick={() => navigate('/register')} className="bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-200 hover:shadow-xl transition-all">
+                Đăng ký
+              </Button>
             </>
           )}
         </nav>
+
+        {/* MOBILE MENU BUTTON */}
+        <div className="flex items-center gap-2 md:hidden">
+          {/* Mobile Search Icon (opens expanded mode or just navigates) - simplified to standard search component in dynamic mode if needed, but here we put it in menu */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="text-slate-600"
+          >
+            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </div>
+
+      {/* MOBILE MENU DRAWER */}
+      {isMenuOpen && (
+        <div className="border-t border-slate-100 bg-white/95 backdrop-blur-xl md:hidden absolute top-16 left-0 right-0 shadow-xl animate-in slide-in-from-top-2 p-4 flex flex-col gap-4">
+          <div className="relative">
+            <Search variant="static" className="w-full" />
+          </div>
+
+          <nav className="flex flex-col gap-2">
+            <Button variant="ghost" className="justify-start" onClick={() => { navigate('/search'); setIsMenuOpen(false); }}>
+              <BookOpen className="mr-2 h-4 w-4" /> Khám phá
+            </Button>
+
+            {isAuthenticated ? (
+              <>
+                <Button variant="ghost" className="justify-start" onClick={() => { navigate('/profile'); setIsMenuOpen(false); }}>
+                  <User className="mr-2 h-4 w-4" /> Tài khoản: {user?.fullName || "User"}
+                </Button>
+                <Button variant="ghost" className="justify-start text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" /> Đăng xuất
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" className="justify-start" onClick={() => { navigate('/login'); setIsMenuOpen(false); }}>
+                  <User className="mr-2 h-4 w-4" /> Đăng nhập
+                </Button>
+                <Button className="justify-start bg-slate-900 text-white" onClick={() => { navigate('/register'); setIsMenuOpen(false); }}>
+                  Đăng ký ngay
+                </Button>
+              </>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
-  );  
-}
+  );
+};
 
 export default HeaderBar;

@@ -24,7 +24,7 @@ class StatsController {
       // Users registered in last 24 hours
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
-      
+
       const newUsers24h = await User.count({
         where: {
           is_deleted: 0,
@@ -37,7 +37,7 @@ class StatsController {
       // Users registered in last 7 days
       const lastWeek = new Date();
       lastWeek.setDate(lastWeek.getDate() - 7);
-      
+
       const newUsersWeek = await User.count({
         where: {
           is_deleted: 0,
@@ -109,7 +109,7 @@ class StatsController {
     try {
       const { period = "30" } = req.query; // days
       const days = parseInt(period) || 30;
-      
+
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
@@ -159,7 +159,7 @@ class StatsController {
       `, { type: sequelize.QueryTypes.SELECT });
 
       const total = stats.reduce((sum, s) => sum + parseInt(s.count || 0), 0);
-      
+
       const distribution = stats.map(s => ({
         name: s.name,
         count: parseInt(s.count || 0),
@@ -300,6 +300,67 @@ class StatsController {
       });
     } catch (error) {
       console.error("Get user tier stats error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error"
+      });
+    }
+  }
+
+  // Get public stats for homepage (no auth required)
+  static async getPublicStats(req, res) {
+    try {
+      // Total users
+      const totalUsers = await User.count({
+        where: { is_deleted: 0 }
+      });
+
+      // Total books
+      const totalBooks = await Book.count();
+
+      // Total authors
+      const totalAuthors = await Author.count();
+
+      // Average rating from comments
+      const avgRatingResult = await Comment.findOne({
+        attributes: [
+          [fn('AVG', col('rating')), 'avgRating'],
+          [fn('COUNT', col('comment_id')), 'totalReviews']
+        ],
+        where: {
+          status: 'APPROVED'
+        },
+        raw: true
+      });
+
+      const avgRating = avgRatingResult?.avgRating
+        ? parseFloat(avgRatingResult.avgRating).toFixed(1)
+        : "4.5";
+      const totalReviews = avgRatingResult?.totalReviews || 0;
+
+      // Total downloads/reads (sum of download_count from books)
+      const downloadResult = await Book.findOne({
+        attributes: [
+          [fn('SUM', col('download_count')), 'totalDownloads']
+        ],
+        raw: true
+      });
+
+      const totalDownloads = downloadResult?.totalDownloads || 0;
+
+      res.status(200).json({
+        success: true,
+        data: {
+          books: totalBooks,
+          users: totalUsers,
+          authors: totalAuthors,
+          avgRating: avgRating,
+          totalReviews: totalReviews,
+          totalReads: totalDownloads
+        }
+      });
+    } catch (error) {
+      console.error("Get public stats error:", error);
       res.status(500).json({
         success: false,
         message: "Server error"

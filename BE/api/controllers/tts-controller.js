@@ -2,77 +2,169 @@ import { GoogleGenAI } from "@google/genai";
 import cloudinary from "../config/cloudinary-config.js";
 import { Readable } from 'stream';
 import Chapter from "../models/chapter-model.js";
-
+import { Task } from "../models/index.js";
+import { splitTextBySentence } from "../utils/text-splitter.js";
 import wav from 'wav';
+import Book from "../models/book-model.js";
 
-export const generateSpeech = async (req, res) => {
+// Background processing function
+const processTTS = async (taskId, text, voiceName, chapterId) => {
     try {
-        const { text, voiceName = 'Kore', chapterId } = req.body;
+        const task = await Task.findByPk(taskId);
+        if (!task) return;
 
-        // 1. Check if chapterId is provided
+        await task.update({ status: 'PROCESSING' });
+
+        // 1. Check if chapterId is provided & Check Cache
         if (chapterId) {
             const chapter = await Chapter.findByPk(chapterId);
-            if (!chapter) {
-                return res.status(404).json({ message: "Chapter not found" });
-            }
-
-            // 2. Check cache in database
-            const audioLinks = chapter.audio_links || [];
-            const cachedAudio = audioLinks.find(link => link.voice === voiceName);
-
-            if (cachedAudio) {
-                return res.status(200).json({
-                    audioUrl: cachedAudio.url,
-                    message: "Retrieved from cache",
-                    voice: voiceName
-                });
+            if (chapter) {
+                const audioLinks = chapter.audio_links || [];
+                const cachedAudio = audioLinks.find(link => link.voice === voiceName);
+                if (cachedAudio) {
+                    await task.update({
+                        status: 'COMPLETED',
+                        result: {
+                            audioUrl: cachedAudio.url,
+                            voice: voiceName,
+                            message: "Retrieved from cache"
+                        }
+                    });
+                    return;
+                }
             }
         }
 
-        // 3. Validate text if not cached
+        // 2. Validate text
         const textToSpeak = text || (chapterId ? (await Chapter.findByPk(chapterId))?.content : null);
-
         if (!textToSpeak) {
-            return res.status(400).json({ message: "Text or valid Chapter ID is required" });
+            throw new Error("Text or valid Chapter ID is required");
         }
 
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            return res.status(500).json({ message: "GEMINI_API_KEY is not configured" });
+            throw new Error("GEMINI_API_KEY is not configured");
         }
 
-        // 4. Generate Speech
-        const ai = new GoogleGenAI({ apiKey });
+        // 3. Generate Speech (Chunked & Parallel)
+        const chunks = splitTextBySentence(textToSpeak, 1000);
+        console.log(`[Task ${taskId}] Splitting text into ${chunks.length} chunks for TTS.`);
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-pro-preview-tts",
-            contents: [{ parts: [{ text: textToSpeak }] }],
-            config: {
-                responseModalities: ['AUDIO'],
-                speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: voiceName },
-                    },
-                },
-            },
+        await task.update({
+            progress: { current: 0, total: chunks.length, stage: 'processing' }
         });
 
-        const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        const ai = new GoogleGenAI({ apiKey });
+        const voiceConfig = {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+                voiceConfig: {
+                    prebuiltVoiceConfig: { voiceName: voiceName },
+                },
+            },
+        };
 
-        if (!data) {
-            throw new Error("No audio data received from Gemini");
+        const CONCURRENCY_LIMIT = 5;
+        const chunkBuffers = new Array(chunks.length);
+        let completedChunks = 0;
+
+        for (let i = 0; i < chunks.length; i += CONCURRENCY_LIMIT) {
+            const batch = chunks.slice(i, i + CONCURRENCY_LIMIT);
+            const batchIndices = batch.map((_, idx) => i + idx);
+
+            console.log(`[Task ${taskId}] Processing batch ${Math.ceil((i + 1) / CONCURRENCY_LIMIT)}/${Math.ceil(chunks.length / CONCURRENCY_LIMIT)} (Chunks ${batchIndices[0] + 1}-${batchIndices[batchIndices.length - 1] + 1})...`);
+
+            await Promise.all(batch.map(async (chunk, batchIdx) => {
+                try {
+                    const globalIdx = i + batchIdx;
+                    const models = ["gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"];
+                    let success = false;
+
+                    for (const model of models) {
+                        let attempts = 0;
+                        const maxAttempts = 3;
+
+                        while (attempts < maxAttempts) {
+                            try {
+                                const response = await ai.models.generateContent({
+                                    model: model,
+                                    contents: [{ parts: [{ text: chunk }] }],
+                                    config: voiceConfig,
+                                });
+
+                                const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+
+                                if (!data) {
+                                    console.warn(`[Task ${taskId}] No audio data for chunk ${globalIdx + 1} using ${model}, skipping/retrying.`);
+                                    // Treat no data as a failure to try next attempt/model? 
+                                    // Or accept it as empty? Original code accepted it as empty buffer but that seems wrong if it's an error.
+                                    // Original code: chunkBuffers[globalIdx] = Buffer.alloc(0);
+                                    // If it returns no data, maybe we should retry?
+                                    // Let's stick closer to original logic but if it's empty maybe we want to retry if it's unexpected.
+                                    // For now, I'll assume if no data, we might want to try again or switch model.
+                                    // But if the model says "success" but no data, it's tricky.
+                                    // Let's throw error to force retry/switch if data is missing.
+                                    throw new Error("No inline data in response");
+                                } else {
+                                    chunkBuffers[globalIdx] = Buffer.from(data, 'base64');
+                                }
+                                success = true;
+                                break; // Success, exit retry loop
+                            } catch (err) {
+                                attempts++;
+                                console.error(`[Task ${taskId}] Error processing chunk ${globalIdx + 1} with model ${model} (Attempt ${attempts}/${maxAttempts}):`, err.message);
+
+                                if (attempts >= maxAttempts) {
+                                    console.warn(`[Task ${taskId}] Failed all attempts with model ${model}. Switching if available.`);
+                                } else {
+                                    // Exponential backoff: 1s, 2s, 4s...
+                                    await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts - 1)));
+                                }
+                            }
+                        }
+                        if (success) {
+                            console.log(`[Task ${taskId}] Chunk ${globalIdx + 1} success with ${model}`);
+                            break; // Success, exit model loop
+                        }
+                    }
+
+                    if (!success) {
+                        // If we want to handle partial failure gracefully, we could allow empty buffer, 
+                        // but usually we want all chunks.
+                        // Original code threw error if final buffer was empty, but loop threw err if maxAttempts reached.
+                        throw new Error(`Failed to generate chunk ${globalIdx + 1} after trying all models.`);
+                    }
+                } finally {
+                    completedChunks++;
+                }
+            }));
+
+            // Update progress
+            await task.update({
+                progress: { current: completedChunks, total: chunks.length, stage: 'processing' }
+            });
         }
 
-        const audioBuffer = Buffer.from(data, 'base64');
+        const combinedBuffer = Buffer.concat(chunkBuffers);
 
-        // 5. Upload to Cloudinary (Convert PCM to WAV stream)
+        if (combinedBuffer.length === 0) {
+            throw new Error("No audio data generated from any chunk");
+        }
+
+        const audioBuffer = combinedBuffer;
+
+        // Update progress before upload
+        await task.update({
+            progress: { current: chunks.length, total: chunks.length, stage: 'uploading' }
+        });
+
+        // 4. Upload to Cloudinary
         const uploadStream = () => {
             return new Promise((resolve, reject) => {
-                // Cloudinary upload stream
                 const cloudStream = cloudinary.uploader.upload_stream(
                     {
                         folder: "tts_audio",
-                        resource_type: "video", // Important for audio on Cloudinary
+                        resource_type: "video",
                         public_id: `chapter_${chapterId || 'temp'}_${voiceName}_${Date.now()}`
                     },
                     (error, result) => {
@@ -81,17 +173,13 @@ export const generateSpeech = async (req, res) => {
                     }
                 );
 
-                // Wav Writer to convert PCM to WAV format
                 const wavWriter = new wav.Writer({
                     channels: 1,
                     sampleRate: 24000,
                     bitDepth: 16
                 });
 
-                // Pipe Wav Writer -> Cloudinary Stream
                 wavWriter.pipe(cloudStream);
-
-                // Write PCM data to Wav Writer
                 wavWriter.end(audioBuffer);
             });
         };
@@ -99,67 +187,160 @@ export const generateSpeech = async (req, res) => {
         const result = await uploadStream();
         const audioUrl = result.secure_url;
 
-        // 6. Update Database if chapterId exists
+        // 5. Update Database if chapterId exists
         if (chapterId) {
             const chapter = await Chapter.findByPk(chapterId);
             let currentLinks = chapter.audio_links || [];
             if (!Array.isArray(currentLinks)) currentLinks = [];
-
-            // Remove old link for same voice if exists
             currentLinks = currentLinks.filter(link => link.voice !== voiceName);
-
-            // Add new link
             currentLinks.push({ voice: voiceName, url: audioUrl });
-
             await chapter.update({ audio_links: currentLinks });
         }
 
-        res.status(200).json({
-            audioUrl: audioUrl,
-            message: "Audio generated and uploaded successfully",
-            voice: voiceName
+        // 6. Update Task Status
+        await task.update({
+            status: 'COMPLETED',
+            progress: { current: chunks.length, total: chunks.length, stage: 'completed' },
+            result: {
+                audioUrl: audioUrl,
+                voice: voiceName,
+                message: "Audio generated and uploaded successfully"
+            }
         });
+        console.log(`[Task ${taskId}] Completed successfully.`);
 
     } catch (error) {
-        console.error("Error generating speech:", error);
-        res.status(500).json({ message: "Failed to generate speech", error: error.message });
+        console.error(`[Task ${taskId}] Failed:`, error);
+        await Task.update({
+            status: 'FAILED',
+            error: error.message
+        }, {
+            where: { id: taskId }
+        });
+    }
+};
+
+export const generateSpeech = async (req, res) => {
+    try {
+        const { text, voiceName = 'Kore', chapterId } = req.body;
+
+        // Check if chapterId is provided & Check Cache
+        if (chapterId) {
+            const chapter = await Chapter.findByPk(chapterId);
+            if (chapter) {
+                const audioLinks = chapter.audio_links || [];
+                const cachedAudio = audioLinks.find(link => link.voice === voiceName);
+                if (cachedAudio) {
+                    return res.status(200).json({
+                        audioUrl: cachedAudio.url,
+                        message: "Retrieved from cache",
+                        voice: voiceName
+                    });
+                }
+            }
+        }
+
+        // Fetch context information
+        let bookTitle = null;
+        let chapterTitle = null;
+        let bookId = null;
+
+        if (chapterId) {
+            const chapter = await Chapter.findByPk(chapterId, {
+                include: [{ association: 'book', attributes: ['id', 'title'] }]
+            });
+            if (chapter) {
+                chapterTitle = chapter.title;
+                if (chapter.book) {
+                    bookId = chapter.book.id;
+                    bookTitle = chapter.book.title;
+                }
+            }
+        }
+
+        // Create Task
+        const task = await Task.create({
+            type: 'TTS',
+            status: 'PENDING',
+            chapter_id: chapterId || null,
+            book_id: bookId,
+            book_title: bookTitle,
+            chapter_title: chapterTitle,
+            voice_name: voiceName,
+        });
+
+        // Respond immediately
+        res.status(202).json({
+            taskId: task.id,
+            message: "TTS generation started",
+            status: "PENDING"
+        });
+
+        // Trigger background processing
+        processTTS(task.id, text, voiceName, chapterId);
+
+    } catch (error) {
+        console.error("Error initiating TTS task:", error);
+        res.status(500).json({ message: "Failed to initiate TTS task", error: error.message });
     }
 };
 
 const VOICES = [
-    { name: "Zephyr", description: "Tươi sáng" },
-    { name: "Puck", description: "Rộn ràng" },
-    { name: "Charon", description: "Cung cấp nhiều thông tin" },
-    { name: "Kore", description: "Firm" },
-    { name: "Fenrir", description: "Dễ kích động" },
-    { name: "Leda", description: "Trẻ trung" },
-    { name: "Orus", description: "Firm" },
-    { name: "Aoede", description: "Breezy" },
-    { name: "Callirrhoe", description: "Dễ chịu" },
-    { name: "Autonoe", description: "Tươi sáng" },
-    { name: "Enceladus", description: "Breathy" },
-    { name: "Iapetus", description: "Rõ ràng" },
-    { name: "Umbriel", description: "Dễ tính" },
-    { name: "Algieba", description: "Làm mịn" },
-    { name: "Despina", description: "Smooth (Mượt mà)" },
-    { name: "Erinome", description: "Clear" },
-    { name: "Algenib", description: "Khàn" },
-    { name: "Rasalgethi", description: "Cung cấp nhiều thông tin" },
-    { name: "Laomedeia", description: "Rộn ràng" },
-    { name: "Achernar", description: "Mềm" },
-    { name: "Alnilam", description: "Firm" },
-    { name: "Schedar", description: "Even" },
-    { name: "Gacrux", description: "Người trưởng thành" },
-    { name: "Pulcherrima", description: "Lạc quan" },
-    { name: "Achird", description: "Thân thiện" },
-    { name: "Zubenelgenubi", description: "Thông thường" },
-    { name: "Vindemiatrix", description: "Êm dịu" },
-    { name: "Sadachbia", description: "Lively" },
-    { name: "Sadaltager", description: "Hiểu biết" },
-    { name: "Sulafat", description: "Ấm" }
+    { name: "Zephyr", description: "Nam giọng sáng trẻ trung linh hoạt" },
+    { name: "Puck", description: "Nam giọng cao rộn ràng vui tươi" },
+    { name: "Charon", description: "Nam giọng trầm quyền lực âm u" },
+    { name: "Kore", description: "Nữ giọng trầm vững chắc điềm tĩnh" },
+    { name: "Fenrir", description: "Nam giọng mạnh sôi nổi đầy năng lượng" },
+    { name: "Leda", description: "Nữ giọng trẻ trung trong sáng nhẹ nhàng" },
+    { name: "Orus", description: "Nam giọng chắc khỏe rõ ràng tự tin" },
+    { name: "Aoede", description: "Nữ giọng nhẹ nhàng êm ái dễ nghe" },
+    { name: "Callirrhoe", description: "Nữ giọng dịu dàng dễ chịu tự nhiên" },
+    { name: "Autonoe", description: "Nữ giọng sáng rõ linh hoạt trẻ trung" },
+    { name: "Enceladus", description: "Nam giọng thở gấp căng thẳng dữ dội" },
+    { name: "Iapetus", description: "Nam giọng rõ ràng mạch lạc chuẩn xác" },
+    { name: "Umbriel", description: "Nam giọng trầm dễ tính chậm rãi" },
+    { name: "Algieba", description: "Nam giọng mượt mà trầm ấm ổn định" },
+    { name: "Despina", description: "Nữ giọng mượt mà mềm mại tự nhiên" },
+    { name: "Erinome", description: "Nữ giọng trong trẻo cao nhẹ tinh tế" },
+    { name: "Algenib", description: "Nam giọng khàn khàn thô ráp cá tính" },
+    { name: "Rasalgethi", description: "Nữ giọng dữ dội hoang dã đầy uy lực" },
+    { name: "Laomedeia", description: "Nữ giọng rộn ràng hoạt bát vui vẻ" },
+    { name: "Achernar", description: "Nam giọng mềm mại trầm ấm dễ nghe" },
+    { name: "Alnilam", description: "Nam giọng vững chắc ổn định đáng tin" },
+    { name: "Schedar", description: "Nam giọng đều đặn chậm rãi rõ ràng" },
+    { name: "Gacrux", description: "Nam giọng trưởng thành trầm ổn chín chắn" },
+    { name: "Pulcherrima", description: "Nữ giọng lạc quan tươi sáng tích cực" },
+    { name: "Achird", description: "Nam giọng thân thiện gần gũi dễ mến" },
+    { name: "Zubenelgenubi", description: "Nam giọng trung tính bình thường dễ nghe" },
+    { name: "Vindemiatrix", description: "Nữ giọng êm dịu nhẹ nhàng thư giãn" },
+    { name: "Sadachbia", description: "Nam giọng sống động linh hoạt giàu cảm xúc" },
+    { name: "Sadaltager", description: "Nam giọng hiểu biết chín chắn đáng tin" },
+    { name: "Sulafat", description: "Nữ giọng ấm áp dịu dàng đầy cảm xúc" }
 ];
 
 export const getVoices = async (req, res) => {
-    console.log("GET /voices request received");
-    res.status(200).json(VOICES);
+    try {
+        const { chapterId } = req.query;
+        let availableVoices = {}; // Map voiceName -> audioUrl
+
+        if (chapterId) {
+            const chapter = await Chapter.findByPk(chapterId);
+            if (chapter && Array.isArray(chapter.audio_links)) {
+                chapter.audio_links.forEach(link => {
+                    availableVoices[link.voice] = link.url;
+                });
+            }
+        }
+
+        const voicesWithStatus = VOICES.map(voice => ({
+            ...voice,
+            isAvailable: !!availableVoices[voice.name],
+            audioUrl: availableVoices[voice.name] || null
+        }));
+
+        res.status(200).json(voicesWithStatus);
+    } catch (error) {
+        console.error("Error fetching voices:", error);
+        res.status(500).json({ message: "Failed to fetch voices" });
+    }
 };

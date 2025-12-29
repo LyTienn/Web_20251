@@ -118,6 +118,8 @@ export default function Users() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input
+                id="user-search"
+                name="user-search"
                 className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none"
                 placeholder="Tìm người dùng (Tên, Email)..."
                 value={search}
@@ -130,6 +132,8 @@ export default function Users() {
           <div className="w-full md:w-auto">
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Vai trò</label>
             <select
+              id="role-filter"
+              name="role-filter"
               className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none min-w-[150px]"
               value={roleFilter}
               onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
@@ -144,6 +148,8 @@ export default function Users() {
           <div className="w-full md:w-auto">
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Hạng thành viên</label>
             <select
+              id="tier-filter"
+              name="tier-filter"
               className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 outline-none min-w-[150px]"
               value={tierFilter}
               onChange={(e) => { setTierFilter(e.target.value); setCurrentPage(1); }}
@@ -251,6 +257,8 @@ export default function Users() {
               <div>
                 <label className="block text-sm font-medium mb-1">Vai trò (Role)</label>
                 <select
+                  id="user-role"
+                  name="role"
                   className="w-full px-3 py-2 border rounded-md dark:bg-slate-800 dark:border-slate-700"
                   value={formData.role}
                   onChange={e => setFormData({ ...formData, role: e.target.value })}
@@ -262,6 +270,8 @@ export default function Users() {
               <div>
                 <label className="block text-sm font-medium mb-1">Hạng thành viên (Tier)</label>
                 <select
+                  id="user-tier"
+                  name="tier"
                   className="w-full px-3 py-2 border rounded-md dark:bg-slate-800 dark:border-slate-700"
                   value={formData.tier}
                   onChange={e => setFormData({ ...formData, tier: e.target.value })}
@@ -269,6 +279,18 @@ export default function Users() {
                   <option value="FREE">Free (Miễn phí)</option>
                   <option value="PREMIUM">Premium (Trả phí)</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Đặt lại mật khẩu (Tùy chọn)</label>
+                <input
+                  id="user-password"
+                  name="password"
+                  type="password"
+                  className="w-full px-3 py-2 border rounded-md dark:bg-slate-800 dark:border-slate-700"
+                  placeholder="Nhập mật khẩu mới nếu muốn đổi"
+                  value={formData.password || ''}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                />
               </div>
 
               <div className="flex justify-end gap-3 mt-6">

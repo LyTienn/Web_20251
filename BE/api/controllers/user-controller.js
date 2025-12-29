@@ -1,4 +1,4 @@
-import UserModel from "../models/user-model.js";
+import UserModel, { User } from "../models/user-model.js";
 import Subscription from "../models/subscription-model.js";
 class UserController {
   // Lấy thông tin profile của user hiện tại
@@ -8,9 +8,9 @@ class UserController {
 
       // 1. Lấy thông tin User cơ bản
       // Sử dụng raw: true (hoặc user.get({ plain: true }) nếu dùng instance) để dễ gán thuộc tính
-      const user = await UserModel.findByPk(userId, {
-        attributes: { exclude: ["password", "refresh_token"] },
-        raw: true 
+      const user = await User.findByPk(userId, {
+        attributes: { exclude: ["password_hash", "refresh_token"] },
+        raw: true
       });
 
       if (!user) {
@@ -21,9 +21,9 @@ class UserController {
 
       if (user.tier === 'PREMIUM') {
         const activeSub = await Subscription.findOne({
-          where: { 
-            user_id: userId, 
-            status: 'ACTIVE' 
+          where: {
+            user_id: userId,
+            status: 'ACTIVE'
           },
           order: [['expiry_date', 'DESC']], // Lấy gói mới nhất
           raw: true
@@ -374,6 +374,17 @@ class UserController {
       }
       if (fullName) {
         userInstance.full_name = fullName;
+      }
+
+      // Handle password reset by Admin
+      if (req.body.password) {
+        if (req.body.password.length < 6) {
+          return res.status(400).json({
+            success: false,
+            message: "Password must be at least 6 characters",
+          });
+        }
+        await UserModel.updatePassword(userId, req.body.password);
       }
 
       await userInstance.save();

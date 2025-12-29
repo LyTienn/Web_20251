@@ -14,15 +14,13 @@ const instance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 120000,
+
 });
 
-// Request interceptor - Debug headers
+// Request interceptor
 instance.interceptors.request.use(
   function (config) {
-    if (import.meta.env.DEV) {
-        console.log(`Request: ${config.method.toUpperCase()} ${config.url}`);
-    }
     return config;
   },
   function (error) {
@@ -33,7 +31,7 @@ instance.interceptors.request.use(
 // Response interceptor
 instance.interceptors.response.use(
   (response) => {
-    return response.data; 
+    return response.data;
   },
   async (error) => {
     const originalRequest = error.config;

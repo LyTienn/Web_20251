@@ -2,13 +2,15 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
-
-import { ChevronRight, List, FileText, ChevronLeft, ArrowLeft, Headphones, Sparkles, Loader2, Lock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ChevronRight, List, FileText, ChevronLeft, ArrowLeft, Headphones, Sparkles, Loader2, Lock, Globe, Palette } from "lucide-react";
 import Header from "@/components/HeaderBar";
 import { toast } from "react-toastify";
 import axios from "@/config/Axios-config";
 import { debounce } from "lodash";
 import AudioPlayer from "@/components/AudioPlayer";
+import ComicReader from "@/components/ComicReader";
+import { useProgress } from "@/contexts/ProgressContext";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +19,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function ReadBookPage() {
   const { id: bookId } = useParams();
@@ -31,15 +40,29 @@ export default function ReadBookPage() {
   const [showAudioPlayer, setShowAudioPlayer] = useState(false);
 
   // Summary State
-  const [showSummary, setShowSummary] = useState(false);
+  const [showSummaryView, setShowSummaryView] = useState(false);
   const [summaryText, setSummaryText] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
+
+  // Translation State
+  const [showTranslationView, setShowTranslationView] = useState(false);
+  const [translatedText, setTranslatedText] = useState("");
+  const [targetLanguage, setTargetLanguage] = useState("English");
+
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  // Comic State
+  const [comicData, setComicData] = useState([]);
+  const [isGeneratingComic, setIsGeneratingComic] = useState(false);
+  const [showComicReader, setShowComicReader] = useState(false);
+
 
   const isRestoring = useRef(false);
   const hasMarkedCompleted = useRef(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const contentRef = useRef(null);
+  const { addTask, updateTask, removeTask } = useProgress();
 
   const saveProgress = useRef(
     debounce(async (bId, cId, scrollPercent) => {
@@ -71,12 +94,18 @@ export default function ReadBookPage() {
     if (bookId && isAuthenticated) {
       const initReadingStatus = async () => {
         try {
-          await axios.post(`/bookshelf/books/${bookId}`, {
-            bookId: bookId,
-            status: 'READING'
-          });
+          // Check if book is already in bookshelf
+          const checkResponse = await axios.get(`/bookshelf/books/${bookId}/check`);
+
+          // Only add if not already in READING status
+          if (!checkResponse.data?.isReading) {
+            await axios.post(`/bookshelf/books/${bookId}`, {
+              bookId: bookId,
+              status: 'READING'
+            });
+          }
         } catch (error) {
-          console.log("Sách đã có trong tủ");
+          // Silently ignore errors - bookshelf management is not critical
         }
       };
       initReadingStatus();
@@ -233,6 +262,17 @@ export default function ReadBookPage() {
     }
     setInitialScrollPos(0);
     setSelectedChapter(ch);
+    setShowSummaryView(false); // Reset to full content view
+    setSummaryText(""); // Clear previous summary
+    setShowTranslationView(false);
+    setShowTranslationView(false);
+    setTranslatedText("");
+    // Check for existing comic data
+    if (ch.comic_data && ch.comic_data.length > 0) {
+      setComicData(ch.comic_data);
+    } else {
+      setComicData([]);
+    }
   };
 
   const handlePrevChapter = () => {
@@ -256,27 +296,296 @@ export default function ReadBookPage() {
     }
   };
 
-  const handleSummarize = async () => {
+  const pollSummaryTask = async (taskId) => {
+    try {
+      const res = await axios.get(`/tasks/${taskId}`);
+      const task = res.data || res;
+
+      if (task.status === 'COMPLETED') {
+        if (task.result && task.result.summary) {
+          setSummaryText(task.result.summary);
+        } else {
+          setSummaryText("Không tìm thấy kết quả tóm tắt.");
+        }
+        setIsSummarizing(false);
+
+        // Update global progress tracker
+        updateTask(taskId, { status: 'COMPLETED' });
+        // Auto-remove after 3 seconds
+        setTimeout(() => removeTask(taskId), 3000);
+        return;
+      }
+
+      if (task.status === 'FAILED') {
+        setSummaryText("Lỗi tạo tóm tắt: " + (task.error || 'Unknown error'));
+        setIsSummarizing(false);
+
+        // Update global progress tracker
+        updateTask(taskId, { status: 'FAILED', error: task.error });
+        return;
+      }
+
+      // Update progress in global tracker
+      if (task.progress) {
+        updateTask(taskId, { progress: task.progress, status: task.status });
+      }
+
+      // Continue polling
+      setTimeout(() => pollSummaryTask(taskId), 3000);
+
+    } catch (error) {
+      console.error("Polling error:", error);
+      setSummaryText("Lỗi khi kiểm tra trạng thái tóm tắt.");
+      setIsSummarizing(false);
+    }
+  };
+
+  const handleToggleSummary = async (checked) => {
+    setShowSummaryView(checked);
+    if (checked) setShowTranslationView(false);
+
+    if (!checked) {
+      // Switching back to full content, no action needed
+      return;
+    }
+
+    // Switching to summary view
     if (!selectedChapter || !selectedChapter.content) return;
 
-    setShowSummary(true);
+    // Check if summary is already cached
+    if (selectedChapter.summary) {
+      setSummaryText(selectedChapter.summary);
+      setIsSummarizing(false);
+      return;
+    }
+
+    // No cache, generate new summary
     setIsSummarizing(true);
     setSummaryText("");
 
     try {
       const response = await axios.post("/summary", {
-        text: selectedChapter.content
+        text: selectedChapter.content,
+        chapterId: selectedChapter.id
       });
 
-      if (response && response.summary) {
-        setSummaryText(response.summary);
+      const data = response.data || response;
+
+      if (data.taskId) {
+        // Add to global progress tracker
+        addTask({
+          id: data.taskId,
+          type: 'SUMMARY',
+          bookTitle: book?.title || 'Unknown Book',
+          chapterTitle: selectedChapter.title,
+          progress: { current: 0, total: 100, stage: 'init' },
+          status: 'PENDING'
+        });
+
+        // Start Polling
+        pollSummaryTask(data.taskId);
+      } else if (data.summary) {
+        // Immediate result (cached)
+        setSummaryText(data.summary);
+        setIsSummarizing(false);
+      } else {
+        setSummaryText("Không nhận được phản hồi hợp lệ.");
+        setIsSummarizing(false);
       }
+
     } catch (error) {
       console.error("Summary error:", error);
       setSummaryText("Không thể tạo tóm tắt vào lúc này. Vui lòng thử lại sau.");
       toast.error("Lỗi khi tạo tóm tắt");
-    } finally {
       setIsSummarizing(false);
+    }
+  };
+
+  const pollTranslationTask = async (taskId) => {
+    try {
+      const res = await axios.get(`/tasks/${taskId}`);
+      const task = res.data || res;
+
+      if (task.status === 'COMPLETED') {
+        if (task.result && task.result.translation) {
+          setTranslatedText(task.result.translation);
+        } else {
+          setTranslatedText("Không tìm thấy kết quả dịch.");
+        }
+        setIsTranslating(false);
+
+        // Update global progress tracker
+        updateTask(taskId, { status: 'COMPLETED' });
+        // Auto-remove after 3 seconds
+        setTimeout(() => removeTask(taskId), 3000);
+        return;
+      }
+
+      if (task.status === 'FAILED') {
+        setTranslatedText("Lỗi dịch thuật: " + (task.error || 'Unknown error'));
+        setIsTranslating(false);
+
+        // Update global progress tracker
+        updateTask(taskId, { status: 'FAILED', error: task.error });
+        return;
+      }
+
+      // Update progress in global tracker
+      if (task.progress) {
+        updateTask(taskId, { progress: task.progress, status: task.status });
+      }
+
+      // Continue polling
+      setTimeout(() => pollTranslationTask(taskId), 3000);
+
+    } catch (error) {
+      console.error("Polling error:", error);
+      setTranslatedText("Lỗi khi kiểm tra trạng thái dịch.");
+      setIsTranslating(false);
+    }
+  };
+
+  const handleToggleTranslation = async (checked) => {
+    setShowTranslationView(checked);
+    if (checked) setShowSummaryView(false); // Disable summary if translation is on
+
+    if (!checked) return;
+
+    if (!selectedChapter || !selectedChapter.content) return;
+
+    // Check cache locally if we already fetched it in this session (optimized)
+    // Ideally we should check backend cache via API, but let's try to fetch
+
+    setIsTranslating(true);
+    setTranslatedText("");
+
+    try {
+      const response = await axios.post("/translate", {
+        text: selectedChapter.content,
+        chapterId: selectedChapter.id,
+        targetLanguage: targetLanguage
+      });
+
+      const data = response.data || response;
+
+      if (data.taskId) {
+        // Add to global progress tracker
+        addTask({
+          id: data.taskId,
+          type: 'TRANSLATE',
+          bookTitle: book?.title || 'Unknown Book',
+          chapterTitle: selectedChapter.title,
+          progress: { current: 0, total: 100, stage: 'init' },
+          status: 'PENDING'
+        });
+
+        pollTranslationTask(data.taskId);
+      } else if (data.status === 'COMPLETED' && data.result) {
+        setTranslatedText(data.result.translation);
+        setIsTranslating(false);
+      } else {
+        setTranslatedText("Không nhận được phản hồi hợp lệ.");
+        setIsTranslating(false);
+      }
+    } catch (error) {
+      console.error("Translation error:", error);
+      setTranslatedText("Không thể dịch vào lúc này. Vui lòng thử lại sau.");
+      toast.error("Lỗi khi dịch");
+      setIsTranslating(false);
+    }
+  };
+
+  const handleLanguageChange = (e) => {
+    setTargetLanguage(e.target.value);
+    if (showTranslationView) {
+      // Re-trigger translation if view is active
+      setIsTranslating(true); // temporary loading
+      handleToggleTranslation(true);
+    }
+  };
+
+  const pollComicTask = async (taskId) => {
+    try {
+      const res = await axios.get(`/tasks/${taskId}`);
+      const task = res.data || res;
+
+      if (task.status === 'COMPLETED') {
+        setIsGeneratingComic(false);
+        // Reload comic data
+        try {
+          // If we had a specific endpoint or just rely on chapter data reload. 
+          // But our test script fetches /comic/:chapterId. Let's use that.
+          const comicRes = await axios.get(`/comic/${selectedChapter.id}`);
+          const data = comicRes.data || comicRes;
+          if (data && data.comic_data) {
+            setComicData(data.comic_data);
+            // Update local chapter state to include new data
+            setChapters(prev => prev.map(c => c.id === selectedChapter.id ? { ...c, comic_data: data.comic_data } : c));
+            setSelectedChapter(prev => ({ ...prev, comic_data: data.comic_data }));
+          }
+        } catch (e) { console.error("Error fetching comic result", e) }
+
+        updateTask(taskId, { status: 'COMPLETED' });
+        setTimeout(() => removeTask(taskId), 3000);
+        toast.success("Đã tạo truyện tranh xong!");
+        return;
+      }
+
+      if (task.status === 'FAILED') {
+        setIsGeneratingComic(false);
+        updateTask(taskId, { status: 'FAILED', error: task.error });
+        toast.error("Lỗi tạo truyện tranh: " + task.error);
+        return;
+      }
+
+      if (task.progress) {
+        updateTask(taskId, { progress: task.progress, status: task.status });
+      }
+
+      setTimeout(() => pollComicTask(taskId), 3000);
+    } catch (error) {
+      console.error("Comic Polling error:", error);
+      setIsGeneratingComic(false);
+    }
+  };
+
+  const handleGenerateComic = async () => {
+    if (!selectedChapter) return;
+    setIsGeneratingComic(true);
+    try {
+      const response = await axios.post("/comic/generate", {
+        chapterId: selectedChapter.id
+      });
+      const data = response.data || response;
+
+      // Case 1: Comic already exists or returned immediately
+      if (data.status === 'COMPLETED' && data.comic_data) {
+        setComicData(data.comic_data);
+        setChapters(prev => prev.map(c => c.id === selectedChapter.id ? { ...c, comic_data: data.comic_data } : c));
+        setSelectedChapter(prev => ({ ...prev, comic_data: data.comic_data }));
+        setIsGeneratingComic(false);
+        toast.success("Truyện tranh đã sẵn sàng!");
+        return;
+      }
+
+      // Case 2: New Task Started (or existing pending task returned)
+      if (data.taskId) {
+        addTask({
+          id: data.taskId,
+          type: 'COMIC',
+          bookTitle: book?.title,
+          chapterTitle: selectedChapter.title,
+          progress: { current: 0, total: 100, stage: 'initializing' },
+          status: data.status || 'PENDING'
+        });
+        pollComicTask(data.taskId);
+      } else {
+        setIsGeneratingComic(false);
+      }
+    } catch (error) {
+      console.error("Generate Comic error:", error);
+      toast.error("Không thể bắt đầu tạo truyện tranh");
+      setIsGeneratingComic(false);
     }
   };
 
@@ -323,28 +632,86 @@ export default function ReadBookPage() {
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 bg-white h-full relative">
-        <div className="h-14 border-b bg-white flex items-center px-4 justify-between shadow-sm z-10 shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="h-14 border-b bg-white flex items-center px-4 justify-between shadow-sm z-10 shrink-0 gap-4">
+          <div className="flex items-center gap-3 min-w-0 flex-shrink">
             <Link to={`/book/${book.id}`}><Button variant="ghost" size="sm"><ArrowLeft /></Button></Link>
-            <h1 className="font-semibold text-slate-800 truncate max-w-[200px] sm:max-w-md ml-2">{book.title}</h1>
+            <h1 className="font-semibold text-slate-800 truncate text-sm sm:text-base">{book.title}</h1>
           </div>
 
           {selectedChapter && (
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
-                onClick={handleSummarize}
-              >
-                <Sparkles className="h-4 w-4" />
-                <span className="hidden sm:inline">Tóm tắt AI</span>
-              </Button>
+            <div className="flex gap-2 sm:gap-3 items-center flex-shrink-0">
+              <div className="h-9 flex items-center gap-2 px-3 rounded-lg border border-purple-200 bg-purple-50/50">
+                <Sparkles className="h-4 w-4 text-purple-600" />
+                <span className="text-sm font-medium text-purple-700 hidden sm:inline">Tóm tắt</span>
+                <Switch
+                  checked={showSummaryView}
+                  onCheckedChange={handleToggleSummary}
+                  className="data-[state=checked]:bg-purple-600 scale-90"
+                />
+              </div>
+
+              <div className="h-9 flex items-center gap-2 px-3 rounded-lg border border-blue-200 bg-blue-50/50">
+                <Globe className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700 hidden sm:inline">Dịch</span>
+
+                <Select value={targetLanguage} onValueChange={(val) => {
+                  setTargetLanguage(val);
+                  if (showTranslationView) {
+                    setIsTranslating(true);
+                    handleToggleTranslation(true); // Re-trigger
+                  }
+                }}>
+                  <SelectTrigger className="w-[110px] h-7 text-xs border-blue-200 bg-white text-blue-700 focus:ring-0">
+                    <SelectValue placeholder="Ngôn ngữ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="English">English</SelectItem>
+                    <SelectItem value="Vietnamese">Vietnamese</SelectItem>
+                    <SelectItem value="Chinese">Chinese</SelectItem>
+                    <SelectItem value="Japanese">Japanese</SelectItem>
+                    <SelectItem value="Korean">Korean</SelectItem>
+                    <SelectItem value="French">French</SelectItem>
+                    <SelectItem value="German">German</SelectItem>
+                    <SelectItem value="Russian">Russian</SelectItem>
+                    <SelectItem value="Spanish">Spanish</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Switch
+                  checked={showTranslationView}
+                  onCheckedChange={handleToggleTranslation}
+                  className="data-[state=checked]:bg-blue-600 scale-90"
+                />
+              </div>
+
+              <div className="h-9 flex items-center gap-2 px-3 rounded-lg border border-orange-200 bg-orange-50/50">
+                <Palette className="h-4 w-4 text-orange-600" />
+                <span className="text-sm font-medium text-orange-700 hidden sm:inline">Truyện tranh</span>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`h-7 px-2 text-xs border border-orange-200 text-orange-800 ${comicData.length > 0
+                    ? "bg-orange-100 hover:bg-orange-200"
+                    : "bg-white opacity-70 hover:opacity-100 hover:bg-orange-50"
+                    }`}
+                  onClick={() => {
+                    if (comicData.length > 0) {
+                      setShowComicReader(true);
+                    } else {
+                      handleGenerateComic();
+                    }
+                  }}
+                  disabled={isGeneratingComic}
+                >
+                  {isGeneratingComic ? <Loader2 className="h-3 w-3 animate-spin" /> : (comicData.length > 0 ? "Đọc ngay" : "Tạo ngay")}
+                </Button>
+              </div>
 
               <Button
                 variant={showAudioPlayer ? "secondary" : "outline"}
                 size="sm"
-                className="gap-2"
+                className="h-9 gap-2"
                 onClick={() => setShowAudioPlayer(!showAudioPlayer)}
               >
                 <Headphones className="h-4 w-4" />
@@ -365,7 +732,55 @@ export default function ReadBookPage() {
                 <>
                   <article className="w-full prose prose-slate lg:prose-lg max-w-none">
                     <h2 className="text-3xl font-bold mb-6 text-slate-900 border-b pb-4">{selectedChapter.title}</h2>
-                    <div className="whitespace-pre-line text-slate-700 leading-relaxed text-justify font-serif text-lg">{selectedChapter.content}</div>
+
+                    {showSummaryView ? (
+                      // Summary View
+                      <div className="bg-purple-50/30 border-l-4 border-purple-400 rounded-r-lg p-6">
+                        {isSummarizing ? (
+                          <div className="flex flex-col items-center justify-center py-20 gap-4">
+                            <Loader2 className="h-10 w-10 animate-spin text-purple-500" />
+                            <p className="text-slate-600 font-medium">AI đang tạo tóm tắt...</p>
+                            <p className="text-sm text-slate-500">Quá trình này có thể mất vài phút với chương dài</p>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2 mb-4 text-purple-700">
+                              <Sparkles className="h-5 w-5" />
+                              <span className="font-semibold text-sm uppercase tracking-wide">Bản tóm tắt AI</span>
+                            </div>
+                            <div className="whitespace-pre-line text-slate-700 leading-relaxed text-justify text-lg">
+                              {summaryText || "Không có nội dung tóm tắt."}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : showTranslationView ? (
+                      // Translation View
+                      <div className="bg-blue-50/30 border-l-4 border-blue-400 rounded-r-lg p-6">
+                        {isTranslating ? (
+                          <div className="flex flex-col items-center justify-center py-20 gap-4">
+                            <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+                            <p className="text-slate-600 font-medium">AI đang dịch sang {targetLanguage}...</p>
+                            <p className="text-sm text-slate-500">Quá trình này có thể mất vài phút với chương dài</p>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2 mb-4 text-blue-700">
+                              <Globe className="h-5 w-5" />
+                              <span className="font-semibold text-sm uppercase tracking-wide">Bản dịch ({targetLanguage})</span>
+                            </div>
+                            <div className="whitespace-pre-line text-slate-700 leading-relaxed text-justify text-lg font-serif">
+                              {translatedText || "Không có nội dung dịch."}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      // Full Content View
+                      <div className="whitespace-pre-line text-slate-700 leading-relaxed text-justify font-serif text-lg">
+                        {selectedChapter.content}
+                      </div>
+                    )}
                   </article>
 
                   <div className="mt-12 pt-8 border-t border-slate-200 flex items-center justify-between gap-4">
@@ -387,35 +802,21 @@ export default function ReadBookPage() {
         {showAudioPlayer && selectedChapter && (
           <AudioPlayer
             text={selectedChapter.content}
+            chapterId={selectedChapter.id}
+            bookTitle={book?.title}
+            chapterTitle={selectedChapter.title}
             onClose={() => setShowAudioPlayer(false)}
           />
         )
         }
 
-        <Dialog open={showSummary} onOpenChange={setShowSummary}>
-          <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-purple-700">
-                <Sparkles className="h-5 w-5" />
-                Tóm tắt nội dung
-              </DialogTitle>
-              <DialogDescription>
-                Tóm tắt chương: {selectedChapter?.title}
-              </DialogDescription>
-            </DialogHeader>
+        <ComicReader
+          isOpen={showComicReader}
+          onClose={() => setShowComicReader(false)}
+          comicData={comicData}
+        />
 
-            <div className="flex-1 overflow-y-auto p-4 bg-slate-50 rounded-md border text-slate-700 leading-relaxed whitespace-pre-line min-h-[200px]">
-              {isSummarizing ? (
-                <div className="h-full flex flex-col items-center justify-center gap-3 text-slate-500">
-                  <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
-                  <p>AI đang đọc và tóm tắt...</p>
-                </div>
-              ) : (
-                summaryText || "Không có nội dung tóm tắt."
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+
       </main >
       <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
         <DialogContent className="sm:max-w-md">
