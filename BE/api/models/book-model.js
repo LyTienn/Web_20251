@@ -6,7 +6,7 @@ const Book = sequelize.define("books", {
   gutenberg_id: { type: DataTypes.INTEGER },
   title: { type: DataTypes.TEXT },
   author_id: { type: DataTypes.INTEGER },
-  language: { type: DataTypes.STRING(10) },
+  language: { type: DataTypes.STRING, defaultValue: "Vietnamese" },
   download_count: { type: DataTypes.INTEGER },
   summary: { type: DataTypes.TEXT },
   image_url: { type: DataTypes.TEXT },
