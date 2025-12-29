@@ -16,10 +16,15 @@ const UserBookshelf = sequelize.define(
       primaryKey: true,
       field: "book_id",
     },
-    status: {
-      type: DataTypes.ENUM("FAVORITE", "READING"),
-      allowNull: false,
-      primaryKey: true,
+    is_favorite: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: "is_favorite",
+    },
+    is_reading: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: "is_reading",
     },
     added_at: {
       type: DataTypes.DATE,

@@ -43,6 +43,10 @@ const Comment = sequelize.define(
       allowNull: false,
       defaultValue: "PENDING",
     },
+    sentiment: {
+      type: DataTypes.ENUM("POSITIVE", "NEUTRAL", "NEGATIVE"),
+      allowNull: true,
+    },
     is_deleted: {
       type: DataTypes.INTEGER,
       defaultValue: 0,

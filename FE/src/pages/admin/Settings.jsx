@@ -148,6 +148,8 @@ export default function Settings() {
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Họ và tên</label>
                   <div className="relative">
                     <input
+                      id="settings-fullname"
+                      name="fullName"
                       className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder-slate-400"
                       type="text"
                       value={profile.fullName}
@@ -160,6 +162,8 @@ export default function Settings() {
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Email đăng nhập</label>
                   <div className="relative">
                     <input
+                      id="settings-email"
+                      name="email"
                       className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-500 dark:text-slate-400 cursor-not-allowed"
                       disabled
                       type="email"
@@ -173,7 +177,7 @@ export default function Settings() {
                   <button
                     onClick={handleUpdateProfile}
                     disabled={loading}
-                    className="px-6 py-2.5 rounded-lg bg-primary hover:bg-blue-600 text-white font-bold text-sm shadow-lg shadow-primary/25 transition-all active:scale-95 flex items-center gap-2"
+                    className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/30 transition-all active:scale-95 flex items-center gap-2"
                   >
                     {loading ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                     Lưu thông tin
@@ -194,6 +198,8 @@ export default function Settings() {
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Mật khẩu hiện tại</label>
                   <input
+                    id="current-password"
+                    name="currentPassword"
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                     type="password"
                     value={security.currentPassword}
@@ -203,6 +209,8 @@ export default function Settings() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Mật khẩu mới</label>
                   <input
+                    id="new-password"
+                    name="newPassword"
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                     type="password"
                     value={security.newPassword}
@@ -212,6 +220,8 @@ export default function Settings() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Xác nhận mật khẩu mới</label>
                   <input
+                    id="confirm-password"
+                    name="confirmPassword"
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                     type="password"
                     value={security.confirmPassword}

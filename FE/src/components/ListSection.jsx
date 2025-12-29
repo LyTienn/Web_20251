@@ -1,21 +1,39 @@
 import BookCard from "@/components/BookCard";
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay } from 'swiper/modules';
+import 'swiper/css';
 
-const Slider = ({ category, onSelectBook }) => {
+const Slider = ({ category, onSelectBook, index }) => {
+  const isReverse = index % 2 !== 0; // Hàng lẻ chạy ngược (phải -> trái)
+
   return (
     <div className="mb-10">
-      <h2 className="text-2xl font-semibold mb-4">{category.categoryTitle}</h2>
+      <h2 className="text-2xl font-semibold mb-4 text-slate-800">{category.categoryTitle}</h2>
       <div className="relative">
-        <div className="flex gap-4 overflow-x-auto pb-2 scroll-smooth">
+        <Swiper
+          modules={[Autoplay]}
+          spaceBetween={16}
+          slidesPerView={'auto'}
+          loop={category.books.length >= 10} // Chỉ loop nếu đủ nhiều sách để tránh lỗi loop của Swiper
+          autoplay={{
+            delay: 2500,
+            disableOnInteraction: false,
+            reverseDirection: isReverse,
+            pauseOnMouseEnter: true
+          }}
+          className="pb-4"
+        >
           {category.books.map(book => (
-            <div
-              key={book.id}
-              className="min-w-[180px] max-w-[180px] shrink-0 cursor-pointer"
-              onClick={() => onSelectBook && onSelectBook(book)}
-            >
-              <BookCard book={book} />
-            </div>
+            <SwiperSlide key={book.id} className="!w-[180px] !h-auto">
+              <div
+                className="cursor-pointer hover:scale-105 transition-transform duration-300 h-full"
+                onClick={() => onSelectBook && onSelectBook(book)}
+              >
+                <BookCard book={book} />
+              </div>
+            </SwiperSlide>
           ))}
-        </div>
+        </Swiper>
       </div>
     </div>
   );
@@ -53,7 +71,9 @@ export default function ListSection({ books = [], onSelectBook }) {
       });
     }
 
-    return categoryList;
+    return categoryList.filter(cat =>
+      cat.categoryTitle === 'Sách mới cập nhật' || cat.books.length >= 5
+    );
   };
 
   const categories = getCategorizedBooks();
@@ -70,7 +90,12 @@ export default function ListSection({ books = [], onSelectBook }) {
     <div className="w-full">
       <section>
         {categories.map((category, index) => (
-          <Slider key={index} category={category} onSelectBook={onSelectBook} />
+          <Slider
+            key={index}
+            category={category}
+            onSelectBook={onSelectBook}
+            index={index}
+          />
         ))}
       </section>
     </div>

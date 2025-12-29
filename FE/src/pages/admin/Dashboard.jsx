@@ -67,6 +67,79 @@ export default function Dashboard() {
     return name.substring(0, 2).toUpperCase();
   };
 
+  const exportReport = () => {
+    // Prepare data for CSV
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('vi-VN');
+    const timeStr = now.toLocaleTimeString('vi-VN');
+
+    let csvContent = "";
+
+    // Header
+    csvContent += "BÁO CÁO TỔNG QUAN HỆ THỐNG\n";
+    csvContent += `Ngày xuất: ${dateStr} ${timeStr}\n\n`;
+
+    // User Stats
+    csvContent += "=== THỐNG KÊ NGƯỜI DÙNG ===\n";
+    csvContent += `Tổng số thành viên,${stats?.users?.total || 0}\n`;
+    csvContent += `Thành viên Premium,${stats?.users?.premium || 0}\n`;
+    csvContent += `Thành viên Free,${stats?.users?.free || 0}\n`;
+    csvContent += `Đăng ký mới 24h,${stats?.users?.newLast24h || 0}\n`;
+    csvContent += `Đăng ký mới 7 ngày,${stats?.users?.newLastWeek || 0}\n\n`;
+
+    // Book Stats
+    csvContent += "=== THỐNG KÊ SÁCH ===\n";
+    csvContent += `Tổng số sách,${stats?.books?.total || 0}\n`;
+    csvContent += `Sách Premium,${stats?.books?.premium || 0}\n`;
+    csvContent += `Sách Free,${stats?.books?.free || 0}\n\n`;
+
+    // Comment Stats
+    csvContent += "=== THỐNG KÊ BÌNH LUẬN ===\n";
+    csvContent += `Tổng số bình luận,${stats?.comments?.total || 0}\n\n`;
+
+    // Registration Trend
+    if (registrationData.length > 0) {
+      csvContent += "=== XU HƯỚNG ĐĂNG KÝ (30 NGÀY) ===\n";
+      csvContent += "Ngày,Số lượng đăng ký\n";
+      registrationData.forEach(item => {
+        csvContent += `${item.date},${item.count}\n`;
+      });
+      csvContent += "\n";
+    }
+
+    // Subject Distribution
+    if (subjectStats?.distribution?.length > 0) {
+      csvContent += "=== PHÂN BỔ DANH MỤC SÁCH ===\n";
+      csvContent += "Thể loại,Số lượng,Phần trăm\n";
+      subjectStats.distribution.forEach(item => {
+        csvContent += `${item.name},${item.count},${item.percent}%\n`;
+      });
+      csvContent += "\n";
+    }
+
+    // Recent Users
+    if (recentUsers.length > 0) {
+      csvContent += "=== THÀNH VIÊN MỚI NHẤT ===\n";
+      csvContent += "Tên,Email,Ngày đăng ký,Gói\n";
+      recentUsers.forEach(user => {
+        csvContent += `${user.full_name || 'Chưa đặt tên'},${user.email},${formatDate(user.created_at)},${user.tier}\n`;
+      });
+    }
+
+    // Create Blob with BOM for proper UTF-8 encoding in Excel
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `bao-cao-he-thong_${now.toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -181,7 +254,10 @@ export default function Dashboard() {
           <p className="text-slate-500 dark:text-slate-400">Tổng quan số liệu và báo cáo hệ thống.</p>
         </div>
         <div className="flex gap-3">
-          <button className="px-4 py-2 bg-white dark:bg-[#1C252E] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-2">
+          <button
+            onClick={exportReport}
+            className="px-4 py-2 bg-white dark:bg-[#1C252E] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-2"
+          >
             <Download size={18} />
             <span>Xuất báo cáo</span>
           </button>

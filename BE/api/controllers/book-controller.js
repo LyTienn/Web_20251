@@ -4,6 +4,7 @@ import Author from "../models/author-model.js";
 import BookSubject from "../models/book_subject-model.js";
 import BookShelf from "../models/bookshelf-model.js";
 import BookBookshelf from "../models/book_bookshelf-model.js";
+import { addBookToVectorStore } from "../services/rag-service.js";
 import { Op } from "sequelize";
 import sequelize from "../config/db-config.js";
 
@@ -28,9 +29,31 @@ if (!Book.associations.bookshelves) {
 // Lấy toàn bộ sách (có phân trang)
 export const getAllBooks = async (req, res) => {
   try {
-    const { subjectId, authorId, page = 1, limit = 10, keyword, q, type } = req.query;
+    const { subjectId, authorId, page = 1, limit = 10, keyword, q, type, sort } = req.query;
     let where = { is_deleted: 0 }; // Soft filter
     const offset = (page - 1) * limit;
+
+    // Sorting logic
+    let order = [['created_at', 'DESC']]; // Default: Newest
+    if (sort) {
+      switch (sort) {
+        case 'oldest':
+          order = [['created_at', 'ASC']];
+          break;
+        case 'a-z':
+          order = [['title', 'ASC']];
+          break;
+        case 'z-a':
+          order = [['title', 'DESC']];
+          break;
+        case 'views':
+          order = [['download_count', 'DESC']]; // Assuming download_count ~ views/popularity
+          break;
+        case 'newest':
+        default:
+          order = [['created_at', 'DESC']];
+      }
+    }
 
     const searchTerm = keyword || q;
 
@@ -111,7 +134,8 @@ export const getAllBooks = async (req, res) => {
       // logging: console.log,
       offset: parseInt(offset),
       distinct: true, // Important for include to count correctly
-      order: [['created_at', 'DESC']] // Default sort
+      distinct: true, // Important for include to count correctly
+      order: order // Use dynamic sort order
     });
 
     res.json({
@@ -173,12 +197,12 @@ export const getBookChapters = async (req, res) => {
     const { id: bookId } = req.params;
     const book = await Book.findByPk(bookId);
     if (!book) return res.status(404).json({ success: false, message: "Sách không tồn tại" });
-    const chapters = await Chapter.findAll({ 
-        where: { book_id: bookId },
-        order: [['id', 'ASC']] 
+    const chapters = await Chapter.findAll({
+      where: { book_id: bookId },
+      order: [['id', 'ASC']]
     });
     if (book.type === "PREMIUM") {
-      const userId = req.user?.id || req.user?.userId; 
+      const userId = req.user?.id || req.user?.userId;
       if (!userId) {
         return res.status(401).json({ success: false, message: "Vui lòng đăng nhập để đọc sách" });
       }
@@ -189,15 +213,15 @@ export const getBookChapters = async (req, res) => {
 
       if (user.tier !== "PREMIUM" && user.role !== "ADMIN") {
         const processedChapters = chapters.map((ch, index) => {
-            const chapterData = ch.toJSON(); 
-            if (index < 3) {
-                return { ...chapterData, isLocked: false };
-            }         
-            return { 
-                ...chapterData, 
-                content: "Nội dung dành riêng cho hội viên Premium.", 
-                isLocked: true 
-            };
+          const chapterData = ch.toJSON();
+          if (index < 3) {
+            return { ...chapterData, isLocked: false };
+          }
+          return {
+            ...chapterData,
+            content: "Nội dung dành riêng cho hội viên Premium.",
+            isLocked: true
+          };
         });
         return res.json({ success: true, data: processedChapters });
       }
@@ -309,6 +333,10 @@ export const createBook = async (req, res) => {
         { model: Subject, as: "subjects", attributes: ["id", "name"], through: { attributes: [] } },
       ],
     });
+
+    // Trigger embedding generation for RAG (async)
+    addBookToVectorStore(book.id).catch(err => console.error("Background embedding generation failed:", err));
+
     res.status(201).json({ success: true, data: bookWithDetails, message: "Tạo sách thành công" });
   } catch (error) {
     res.status(500).json({ success: false, message: "Lỗi tạo sách", error: error.message });

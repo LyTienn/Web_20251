@@ -4,14 +4,24 @@ import { useNavigate, Link } from "react-router-dom";
 import { debounce } from "lodash";
 import axios from "@/config/Axios-config";
 
-const Search = () => {
-    const [open, setOpen] = useState(false);
+const Search = ({ variant = "dynamic", className = "" }) => {
+    const [isOpen, setIsOpen] = useState(variant === "static");
     const [keyword, setKeyword] = useState("");
     const [suggestions, setSuggestions] = useState([]);
     const [loading, setLoading] = useState(false);
     const inputRef = useRef(null);
     const wrapperRef = useRef(null);
     const navigate = useNavigate();
+
+    // In static mode, always open interaction-wise, but we manage dropdown visibility differently
+    const [showDropdown, setShowDropdown] = useState(false);
+
+    // Sync variant changes or init
+    useEffect(() => {
+        if (variant === "static") {
+            setIsOpen(true);
+        }
+    }, [variant]);
 
     //API gợi ý (Chỉ lấy tối đa 5 cuốn)
     const fetchSuggestions = async (term) => {
@@ -21,11 +31,7 @@ const Search = () => {
         }
         try {
             setLoading(true);
-            //API search
             const res = await axios.get(`/books?keyword=${encodeURIComponent(term)}`);
-            // Axios config unwraps response.data
-            // Backend: { success: true, data: { books: [], total: ... } }
-            // So res is { success: true, data: { books: ... } }
             const resultData = res.data?.books || [];
             setSuggestions(Array.isArray(resultData) ? resultData.slice(0, 5) : []);
         } catch (error) {
@@ -45,18 +51,21 @@ const Search = () => {
         const term = e.target.value;
         setKeyword(term);
         if (term.trim()) {
-            setOpen(true);
+            if (variant === "dynamic") setIsOpen(true);
+            setShowDropdown(true);
             debouncedFetch(term);
         } else {
             setSuggestions([]);
-            setOpen(false);
+            setShowDropdown(false);
+            if (variant === "dynamic") setIsOpen(false);
         }
     };
 
     const goToSearchPage = () => {
         if (keyword.trim()) {
             navigate(`/search?q=${encodeURIComponent(keyword)}`);
-            setOpen(false); // Đóng dropdown
+            setShowDropdown(false);
+            if (variant === "dynamic") setIsOpen(false);
             inputRef.current?.blur();
         }
     };
@@ -69,10 +78,15 @@ const Search = () => {
     };
 
     const handleIconClick = () => {
-        if (open && keyword) {
+        if (variant === "static") {
+            inputRef.current?.focus();
+            return;
+        }
+
+        if (isOpen && keyword) {
             goToSearchPage();
         } else {
-            setOpen(true);
+            setIsOpen(true);
             setTimeout(() => inputRef.current?.focus(), 100);
         }
     };
@@ -81,45 +95,54 @@ const Search = () => {
     useEffect(() => {
         function handleClickOutside(event) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-                setOpen(false);
+                setShowDropdown(false);
+                if (variant === "dynamic" && !keyword) {
+                    setIsOpen(false);
+                }
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [wrapperRef]);
+    }, [wrapperRef, variant, keyword]);
+
+    const containerClasses = variant === "static"
+        ? `relative flex items-center w-full ${className}`
+        : `relative flex items-center transition-all duration-300 ${isOpen ? "w-72" : "w-10"} ${className}`;
+
+    const inputClasses = variant === "static"
+        ? `w-full pl-10 pr-8 py-2 bg-slate-100 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-100 transition-colors`
+        : `w-full pl-10 pr-8 py-1.5 bg-white border border-gray-200 rounded-full shadow-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-300 ${isOpen ? "opacity-100 visible" : "opacity-0 invisible w-0 p-0 border-none"}`;
 
     return (
-        <div ref={wrapperRef} className="relative z-50">
+        <div ref={wrapperRef} className={`relative z-50 ${variant === "static" ? "w-full" : ""}`}>
             {/* INPUT FORM */}
-            <div className={`relative flex items-center transition-all duration-300 ${open ? "w-72" : "w-10"}`}>
+            <div className={containerClasses}>
                 <button
                     type="button"
                     onClick={handleIconClick}
-                    className="absolute left-0 p-2 rounded-full hover:bg-gray-100 z-10"
+                    className={`absolute left-0 p-2 rounded-full z-10 ${variant === "static" ? "cursor-default" : "hover:bg-gray-100"}`}
                 >
-                    <SearchIcon className="h-5 w-5 text-slate-600" />
+                    <SearchIcon className={`h-4 w-4 ${variant === "static" ? "text-muted-foreground" : "text-slate-600"}`} />
                 </button>
 
                 <input
                     ref={inputRef}
+                    id="main-search"
+                    name="main-search"
                     type="text"
                     value={keyword}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
-                    onFocus={() => keyword && setOpen(true)}
-                    placeholder="Tìm tên sách..."
-                    className={`
-                        w-full pl-10 pr-8 py-1.5 bg-white border border-gray-200 rounded-full
-                        shadow-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100
-                        transition-all duration-300
-                        ${open ? "opacity-100 visible" : "opacity-0 invisible w-0 p-0 border-none"}
-                    `}
+                    onFocus={() => keyword && setShowDropdown(true)}
+                    placeholder="Tìm kiếm sách, tác giả..."
+                    aria-label="Tìm kiếm sách"
+                    className={inputClasses}
                 />
 
                 {/* Nút Xóa text */}
-                {open && keyword && (
+                {isOpen && keyword && (
                     <button
-                        onClick={() => { setKeyword(""); setSuggestions([]); inputRef.current?.focus(); }}
+                        onClick={() => { setKeyword(""); setSuggestions([]); setShowDropdown(false); inputRef.current?.focus(); }}
                         className="absolute right-2 text-gray-400 hover:text-gray-600"
                     >
                         <X className="h-4 w-4" />

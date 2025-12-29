@@ -4,6 +4,9 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { ProgressProvider } from './contexts/ProgressContext';
+import GlobalProgressTracker from './components/GlobalProgressTracker';
+import Chatbot from './components/Chatbot/Chatbot';
 // Admin imports
 import AdminLayout from './components/admin/AdminLayout';
 import RequireAdmin from './components/admin/RequireAdmin';
@@ -15,6 +18,7 @@ import Bookshelves from './pages/admin/Bookshelves';
 import Users from './pages/admin/Users';
 import Registrations from './pages/admin/Registrations';
 import CommentsModeration from './pages/admin/CommentsModeration';
+import BookAnalytics from './pages/admin/BookAnalytics';
 import Settings from './pages/admin/Settings';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -31,7 +35,7 @@ const MainLayout = () => {
     <div className="main-layout">
       <Suspense fallback={<div className="loading-spinner">Loading...</div>}>
         <Routes>
-          <Route path="/homepage/*" element={<HomePage />} />       
+          <Route path="/homepage/*" element={<HomePage />} />
           <Route path="*" element={<HomePage />} />
           <Route path="/book/:id/read" element={<Read />} />
           <Route path="/book/:id" element={<BookSection />} />
@@ -61,6 +65,7 @@ function AppContent() {
         <Route path='users' element={<Users />} />
         <Route path='registrations' element={<Registrations />} />
         <Route path='comments' element={<CommentsModeration />} />
+        <Route path='analytics' element={<BookAnalytics />} />
         <Route path='settings' element={<Settings />} />
       </Route>
       <Route path='/*' element={<MainLayout />} />
@@ -69,9 +74,10 @@ function AppContent() {
 }
 
 function App() {
- return (
-    <>
+  return (
+    <ProgressProvider>
       <AppContent />
+      <GlobalProgressTracker />
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -84,7 +90,8 @@ function App() {
         pauseOnHover
         theme="colored"
       />
-    </>
- ) 
+      <Chatbot />
+    </ProgressProvider>
+  )
 }
 export default App;

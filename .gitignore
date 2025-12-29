@@ -3,3 +3,5 @@
 RUN_GUIDE.md
 RUNNING.md
 BE/scripts/
+.env
+Data/data.backup
