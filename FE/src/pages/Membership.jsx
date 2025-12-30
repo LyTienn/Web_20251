@@ -82,7 +82,7 @@ const Membership = () => {
         if (paymentInfo) {
             interval = setInterval(async () => {
                 try {
-                    const res = await axios.get('/profile');
+                    const res = await axios.get('users/profile');
                     if (res.success && res.data) {
                         const updatedUser = res.data || res.data.user;
                         console.log("Polling User Tier:", updatedUser.tier);

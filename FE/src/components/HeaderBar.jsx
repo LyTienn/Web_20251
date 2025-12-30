@@ -62,7 +62,7 @@ const HeaderBar = () => {
       <div className='container mx-auto h-16 px-4 flex items-center justify-between'>
         {/* LOGO */}
         <Link to="/" className='flex items-center gap-2 group'>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white transition-transform group-hover:scale-105 shadow-md shadow-blue-200">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white transition-transform group-hover:scale-105 shadow-md shadow-blue-200">
             <BookOpen className='h-5 w-5' />
           </div>
           <span className='hidden font-serif text-xl font-bold text-slate-800 sm:block'>Thư Viện Sách</span>
@@ -138,16 +138,25 @@ const HeaderBar = () => {
                       Gói: <span className="font-medium text-slate-700">{getSubscriptionText()}</span>
                     </span>
                   </DropdownMenuItem>
+                  {user?.tier === "FREE" && (
+                    <DropdownMenuItem
+                      onClick={() => navigate("/membership")}
+                      className="cursor-pointer hover:bg-amber-50 text-amber-700 font-semibold"
+                    >
+                      <Zap className="h-4 w-4 mr-2 text-amber-500" />
+                      Nâng cấp ngay
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
 
                   {user?.role !== "admin" && (
-                    <DropdownMenuItem onClick={() => navigate("/bookshelf")} className="cursor-pointer">
+                    <DropdownMenuItem onClick={() => navigate("/bookshelf")} className="cursor-pointer hover:bg-gray-100">
                       <Library className="h-4 w-4 mr-2" />
                       Tủ sách
                     </DropdownMenuItem>
                   )}
 
-                  <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer hover:bg-gray-100">
                     <Settings className="h-4 w-4 mr-2" />
                     Quản lý tài khoản
                   </DropdownMenuItem>

@@ -21,6 +21,7 @@ import {
 import AuthService from "@/service/AuthService";
 import { fetchUserProfile } from "@/redux/Auth/AuthThunk";
 import { setUser } from "@/redux/Auth/AuthSlice";
+import axios from "@/config/Axios-config";
 
 export default function ProfilePage() {
   const { user, isAuthenticated } = useSelector((state) => state.auth);

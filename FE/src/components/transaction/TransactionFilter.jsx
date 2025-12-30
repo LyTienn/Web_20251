@@ -118,7 +118,7 @@ export default function TransactionFilter({
 
         {/* Time Range Filter */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1">
             <Calendar className="h-3.5 w-3.5" />
             Thời gian
           </label>

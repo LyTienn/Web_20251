@@ -6,6 +6,10 @@ const PaymentService = {
     const res = await axiosInstance.get("/payment/history");
     return res;
   },
+  // async getPaymentById(id) {
+  //   const res = await axiosInstance.get(`/payment/${id}`);
+  //   return res.data;
+  // },
 };
 
 export default PaymentService;

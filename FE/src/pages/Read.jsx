@@ -633,13 +633,13 @@ export default function ReadBookPage() {
 
       <main className="flex-1 flex flex-col min-w-0 bg-white h-full relative">
         <div className="h-14 border-b bg-white flex items-center px-4 justify-between shadow-sm z-10 shrink-0 gap-4">
-          <div className="flex items-center gap-3 min-w-0 flex-shrink">
+          <div className="flex items-center gap-3 min-w-0 shrink">
             <Link to={`/book/${book.id}`}><Button variant="ghost" size="sm"><ArrowLeft /></Button></Link>
             <h1 className="font-semibold text-slate-800 truncate text-sm sm:text-base">{book.title}</h1>
           </div>
 
           {selectedChapter && (
-            <div className="flex gap-2 sm:gap-3 items-center flex-shrink-0">
+            <div className="flex gap-2 sm:gap-3 items-center shrink-0">
               <div className="h-9 flex items-center gap-2 px-3 rounded-lg border border-purple-200 bg-purple-50/50">
                 <Sparkles className="h-4 w-4 text-purple-600" />
                 <span className="text-sm font-medium text-purple-700 hidden sm:inline">Tóm tắt</span>
