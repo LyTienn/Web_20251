@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: web20251_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./BE/api
+    container_name: web20251_backend
+    restart: always
+    ports:
+      - "${PORT}:5000"
+    environment:
+      - PORT=5000
+      - DB_HOST=db
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=5432
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+    depends_on:
+      - db
+    env_file:
+      - .env
+
+  frontend:
+    build:
+      context: ./FE
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+    container_name: web20251_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
