@@ -31,8 +31,10 @@ const PORT = process.env.PORT || 5000;
 const DB_SYNC = process.env.DB_SYNC || "alter"; // options: 'alter' | 'force' | 'none'
 
 // Middleware
-// Allow FE dev servers on ports 5173 and 5174
-const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
+// Allow origins from env or default to dev ports
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ["http://localhost:5173", "http://localhost:5174"];
 app.use(
   cors({
     origin: (origin, callback) => {

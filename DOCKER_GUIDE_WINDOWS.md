@@ -67,6 +67,8 @@ Nếu bạn có file backup database (file `.sql`), bạn có thể khôi phục
    gdown 1msWUk-Q4kyaug3sD0OpXtdHehCc5jug4 -O data_5500.backup
    ```
 
+   **Lưu ý:** Nếu `gdown` báo lỗi (quota exceeded/permission), hãy tải thủ công từ link trên trình duyệt, sau đó lưu file vào thư mục dự án với tên `data_5500.backup`.
+
 4. Sau khi tải xong, copy file vào container và restore:
 
 ```powershell
@@ -110,7 +112,6 @@ Nếu bạn gặp lỗi không thể pull image từ Docker Hub (timeout) mặc 
      "builder": {
        "gc": {
          "defaultKeepStorage": "20GB",
-         "image": "postgres:16-alpine",
          "enabled": true
        }
      },
