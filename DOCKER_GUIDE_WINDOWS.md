@@ -110,6 +110,7 @@ Nếu bạn gặp lỗi không thể pull image từ Docker Hub (timeout) mặc 
      "builder": {
        "gc": {
          "defaultKeepStorage": "20GB",
+         "image": "postgres:16-alpine",
          "enabled": true
        }
      },
