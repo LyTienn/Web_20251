@@ -104,6 +104,7 @@ Nếu bạn có file backup database (file `.sql`), bạn có thể khôi phục
    ```bash
    gdown 1msWUk-Q4kyaug3sD0OpXtdHehCc5jug4 -O data_5500.backup
    ```
+   **Lưu ý:** Nếu `gdown` báo lỗi, bạn cần tải file thủ công về máy tính cá nhân rồi dùng SCP hoặc WinSCP để upload lên server.
 
 3. Copy file vào container và khôi phục (định dạng `.backup` thường cần `pg_restore`):
 
