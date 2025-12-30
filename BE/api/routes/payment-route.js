@@ -32,5 +32,5 @@ router.post("/sepay/webhook", PaymentController.sepayWebhook);
 
 //API Lịch sử giao dịch
 router.get("/history", authenticate, PaymentController.getPaymentHistory);
-
+// router.get("/:id", authenticate, PaymentController.getPaymentById);
 export default router;

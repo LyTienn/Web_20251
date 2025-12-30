@@ -14,11 +14,37 @@ import { toast } from "react-toastify";
 export default function Transactions() {
   const { isAuthenticated } = useSelector((state) => state.auth);
   const navigate = useNavigate();
-
+  // const [selectedOrder, setSelectedOrder] = useState(null);
+  // const [qrLoading, setQrLoading] = useState(false);
   const [allHistory, setAllHistory] = useState([]);
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+//   const handleContinue = async (transaction) => {
+//   console.log("handleContinue được gọi với transaction:", transaction);
+//   setQrLoading(true);
+//   setError(null);
+//   try {
+//     console.log("Bắt đầu gọi PaymentService.getPaymentById...");
+//     const res = await PaymentService.getPaymentById(transaction.id);
+//     console.log("✅ API đã trả về:", res);
+    
+//     // res đã là res.data, nên chỉ cần kiểm tra res.success
+//     if (res.success && res.data) {
+//       console.log("✅ Dữ liệu đơn hàng trả về:", res.data);
+//       setSelectedOrder(res.data);
+//     } else {
+//       console.log("❌ Điều kiện if sai - res.success:", res?.success, "res.data:", res?.data);
+//       setError(res?.message || "Không lấy được thông tin đơn hàng");
+//     }
+//   } catch (err) {
+//     console.error("❌ Lỗi catch:", err.message, err);
+//     setError("Lỗi khi lấy thông tin đơn hàng");
+//   } finally {
+//     setQrLoading(false);
+//   }
+// };
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -214,6 +240,36 @@ export default function Transactions() {
                   </CardContent>
                 </Card>
               )}
+            {/* {qrLoading && (
+              <div className="mb-8 p-6 bg-white rounded-lg shadow border border-amber-200">
+                <div className="flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+                  <span>Đang tải thông tin đơn hàng...</span>
+                </div>
+              </div>
+            )}
+            {console.log("selectedOrder:", selectedOrder)}
+            {selectedOrder && selectedOrder.qrUrl && !qrLoading && (
+              <div className="mb-8 p-6 bg-white rounded-lg shadow border border-amber-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold mb-2">Quét mã QR để thanh toán</h2>
+                    <div className="font-semibold mb-1">Số tiền: {selectedOrder.amount} VND</div>
+                    <button
+                      className="text-sm text-blue-600 underline"
+                      onClick={() => setSelectedOrder(null)}
+                    >
+                      Đóng
+                    </button>
+                  </div>
+                  <img
+                    src={selectedOrder.qrUrl}
+                    alt="QR thanh toán"
+                    className="w-40 h-40 object-contain"
+                  />
+                </div>
+              </div>
+            )} */}
 
             {/* Transaction List */}
             {!loading && !error && filteredHistory.length > 0 && (
@@ -223,6 +279,7 @@ export default function Transactions() {
                     <TransactionCard
                       key={transaction.id}
                       transaction={transaction}
+                      // onContinue={handleContinue}
                     />
                   ))}
                 </div>

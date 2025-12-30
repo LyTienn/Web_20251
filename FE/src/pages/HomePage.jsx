@@ -219,7 +219,7 @@ const HomePage = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="flex h-screen items-center justify-center bg-linear-to-br from-slate-50 to-blue-50">
         <div className="text-center">
           <div className="relative">
             <BookOpen className="h-16 w-16 text-blue-600 animate-pulse mx-auto" />
@@ -232,7 +232,7 @@ const HomePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
+    <div className="min-h-screen bg-linear-to-b from-slate-50 via-white to-slate-50">
       <HeaderBar searchData={allBooks} onSearchResult={handleSearchResult} />
 
       {/* Hero Section */}
@@ -261,7 +261,7 @@ const HomePage = () => {
                   key={index}
                   className="bg-white rounded-2xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 text-center hover:shadow-2xl transition-shadow gsap-stats-card"
                 >
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white mb-3">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 text-white mb-3">
                     {stat.icon}
                   </div>
                   <div className="text-2xl md:text-3xl font-bold text-slate-900 truncate px-2" title={typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}>
@@ -276,11 +276,11 @@ const HomePage = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gradient-to-b from-white to-slate-50 gsap-features-section">
+      <section className="py-20 bg-linear-to-br from-white to-slate-50 gsap-features-section">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              Tính năng <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">nổi bật</span>
+              Tính năng <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-600">nổi bật</span>
             </h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
               Trải nghiệm đọc sách thế hệ mới với các công nghệ AI tiên tiến
@@ -294,8 +294,8 @@ const HomePage = () => {
                 onClick={() => navigate('/search')}
                 className="group relative bg-white rounded-2xl p-6 shadow-lg shadow-slate-200/50 border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer gsap-feature-card"
               >
-                <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity" style={{ background: `linear-gradient(135deg, ${feature.color.split(' ')[0].replace('from-', '')} 0%, ${feature.color.split(' ')[1].replace('to-', '')} 100%)` }} />
-                <div className={`inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br ${feature.color} text-white mb-4 group-hover:scale-110 transition-transform`}>
+                <div className="absolute inset-0 bg-linear-to-br opacity-0 group-hover:opacity-5 transition-opacity" style={{ background: `linear-gradient(135deg, ${feature.color.split(' ')[0].replace('from-', '')} 0%, ${feature.color.split(' ')[1].replace('to-', '')} 100%)` }} />
+                <div className={`inline-flex items-center justify-center w-14 h-14 rounded-xl bg-linear-to-br ${feature.color} text-white mb-4 group-hover:scale-110 transition-transform`}>
                   {feature.icon}
                 </div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-2">{feature.title}</h3>
@@ -308,11 +308,11 @@ const HomePage = () => {
 
       {/* Premium Books Section */}
       {premiumBooks.length > 0 && (
-        <section className="py-16 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 gsap-premium-section">
+        <section className="py-16 bg-linear-to-br from-amber-50 via-orange-50 to-yellow-50 gsap-premium-section">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl text-white">
+                <div className="p-2 bg-linear-to-br from-yellow-400 to-orange-500 rounded-xl text-white">
                   <Crown className="h-6 w-6" />
                 </div>
                 <div>
@@ -340,11 +340,11 @@ const HomePage = () => {
                     <img
                       src={book.imageUrl || book.image_url}
                       alt={book.title}
-                      className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full aspect-2/3 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="absolute top-2 right-2">
-                      <span className="px-2 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-xs font-bold text-white rounded-full">
+                      <span className="px-2 py-1 bg-linear-to-r from-yellow-400 to-orange-500 text-xs font-bold text-white rounded-full">
                         PREMIUM
                       </span>
                     </div>
@@ -371,11 +371,11 @@ const HomePage = () => {
 
       <section className="relative py-24 overflow-hidden gsap-cta-section">
         {/* Transition Fade from preceding white section */}
-        <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-white to-transparent z-10 pointer-events-none" />
+        <div className="absolute top-0 left-0 right-0 h-10 bg-linear-to-b from-white to-transparent z-10 pointer-events-none" />
 
         {/* Abstract Background */}
         <div className="absolute inset-0 bg-slate-900 z-0">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-size-[14px_24px] mask-[radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-blue-500/20 rounded-full blur-[100px]" />
           <div className="absolute bottom-0 right-0 w-[800px] h-[400px] bg-purple-500/10 rounded-full blur-[100px]" />
         </div>
@@ -384,15 +384,15 @@ const HomePage = () => {
           <div className="max-w-4xl mx-auto gsap-cta-content">
             <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-2xl p-8 md:p-12 text-center">
               {/* Shining Effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute inset-0 bg-linear-to-br from-white/10 via-transparent to-transparent pointer-events-none" />
 
-              <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-600 shadow-lg shadow-orange-500/20 mb-8 group-hover:scale-110 transition-transform duration-500">
+              <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-linear-to-br from-yellow-400 to-amber-600 shadow-lg shadow-orange-500/20 mb-8 group-hover:scale-110 transition-transform duration-500">
                 <Crown className="h-10 w-10 text-white" />
               </div>
 
               <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
                 Nâng cấp trải nghiệm <br className="hidden md:block" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-200 to-yellow-200 animate-gradient">
+                <span className="text-transparent bg-clip-text bg-linear-to-r from-yellow-200 via-amber-200 to-yellow-200 animate-gradient">
                   Premium Member
                 </span>
               </h2>
@@ -405,7 +405,7 @@ const HomePage = () => {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
                   to="/membership"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-yellow-400 to-amber-600 text-white font-bold rounded-xl shadow-xl shadow-amber-500/20 hover:shadow-amber-500/40 hover:-translate-y-1 transition-all duration-300"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-linear-to-r from-yellow-400 to-amber-600 text-white font-bold rounded-xl shadow-xl shadow-amber-500/20 hover:shadow-amber-500/40 hover:-translate-y-1 transition-all duration-300"
                 >
                   <Crown className="h-5 w-5" />
                   Xem các gói Premium

@@ -37,6 +37,30 @@ class PaymentController {
   static async getPaymentHistory(req, res) {
     try {
       const userId = req.user.userId; // Từ middleware authenticate
+      const now = new Date();
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+
+      await Subscription.update(
+        { status: "CANCELLED" },
+        {
+          where: {
+            user_id: userId,
+            status: "PENDING",
+            start_date: { [Op.lt]: fiveMinutesAgo }
+          }
+        }
+      );
+
+      await Subscription.update(
+        { status: "EXPIRED" },
+        {
+          where: {
+            user_id: userId,
+            status: "ACTIVE",
+            expiry_date: { [Op.lt]: now }
+          }
+        }
+      );
 
       const subscriptions = await Subscription.findAll({
         where: { user_id: userId },
@@ -75,6 +99,49 @@ class PaymentController {
       });
     }
   }
+
+//   static async getPaymentById(req, res) {
+//   try {
+//     const { id } = req.params;
+//     const userId = req.user.userId;
+//     const sub = await Subscription.findOne({
+//       where: {
+//         subscription_id: id,
+//         user_id: userId,
+//       },
+//     });
+//     if (!sub) {
+//       return res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng" });
+//     }
+
+//     let qrUrl = null;
+//     if (sub.payment_transaction_id && sub.status === "PENDING") {
+//       const bankAccount = process.env.SEPAY_BANK_ACCOUNT;
+//       const bankName = process.env.SEPAY_BANK_NAME;
+//       const amount = sub.amount || PaymentController.getPackageAmount(sub.package_details);
+//       const content = sub.payment_transaction_id;
+
+//       qrUrl = `https://qr.sepay.vn/img?bank=${bankName}&acc=${bankAccount}&template=compact&amount=${amount}&des=${content}`;
+//     }
+
+//     res.json({
+//       success: true,
+//       data: {
+//         id: sub.subscription_id,
+//         transactionId: sub.payment_transaction_id,
+//         package: sub.package_details,
+//         amount: sub.amount || PaymentController.getPackageAmount(sub.package_details),
+//         status: sub.status,
+//         statusText: PaymentController.getStatusText(sub.status),
+//         startDate: sub.start_date,
+//         expiryDate: sub.expiry_date,
+//         qrUrl, 
+//       },
+//     });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// }
 
   static getVNPayMessage(responseCode) {
     const messages = {
