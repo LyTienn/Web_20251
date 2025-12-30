@@ -1,8 +1,10 @@
 import { GeminiEmbeddings } from "../utils/GeminiEmbeddings.js";
 import GeminiClient from "../utils/GeminiClient.js";
 import Book from "../models/book-model.js";
+import { Op } from "sequelize";
 
 // Custom Simple Vector Store Implementation to avoid heavy dependencies
+// Limit increased to 300 for better recall
 class SimpleVectorStore {
     constructor(embeddings) {
         this.embeddings = embeddings;
@@ -54,10 +56,12 @@ export const initializeVectorStore = async () => {
         console.log("Initializing RAG Vector Store...");
 
         // 1. Fetch books
-        // Limit to 100 newest books for performance startup.
+        // Fetch ALL books that have embeddings (no limit, but valid embeddings only)
         const books = await Book.findAll({
-            limit: 100,
-            where: { is_deleted: 0 },
+            where: {
+                is_deleted: 0,
+                embedding: { [Op.ne]: null }
+            },
             attributes: ['id', 'title', 'summary', 'language', 'author_id', 'embedding', 'image_url'],
             order: [['id', 'DESC']]
         });
@@ -191,22 +195,48 @@ export const chatWithRAG = async (query) => {
     }
 
     try {
+        // 0. Translate Query to English for better retrieval
+        const client = new GeminiClient(process.env.GEMINI_API_KEY);
+        let searchParam = query;
+
+        try {
+            // Simple heuristic: if query contains non-ascii characters or user speaks Vietnamese, translate it.
+            // Or just always ask Gemini to extract "English Search Keywords" from the query.
+            const translatePrompt = `
+            Translate the following book search query into English keywords for a vector database search.
+            If the query is already in English, return it as is.
+            Only return the translated keywords, no other text.
+            
+            Query: ${query}
+            `;
+            const translatedQuery = (await client.generateContent(translatePrompt)).trim();
+            console.log(`DEBUG RAG TRANSLATED QUERY: "${translatedQuery}"`);
+
+            if (translatedQuery) {
+                searchParam = translatedQuery;
+            }
+        } catch (e) {
+            console.warn("Translation failed, falling back to original query:", e);
+        }
+
         // 1. Retrieve Context
-        const results = await vectorStore.similaritySearch(query, 3);
+        const results = await vectorStore.similaritySearch(searchParam, 5); // Increase k to 5
 
         // Enrich context with image and link from metadata
         const context = results.map(r => {
             return `${r.pageContent}\nImage: ${r.metadata.image_url || "N/A"}\nLink: ${r.metadata.link}`;
         }).join("\n---\n");
 
-        console.log("DEBUG RAG QUERY:", query);
+        console.log("DEBUG RAG QUERY (Original):", query);
+        console.log("DEBUG RAG QUERY (Search):", searchParam);
         console.log("DEBUG RAG CONTEXT:", context);
+        console.log("DEBUG RAG SCORES:", results.map(r => ({ title: r.metadata.title, score: r.score })));
 
         if (!context) {
             return "I couldn't find any relevant books in the library matching your query.";
         }
 
-        const client = new GeminiClient(process.env.GEMINI_API_KEY);
+        // const client = new GeminiClient(process.env.GEMINI_API_KEY); // Already instantiated above
 
         // Define Prompt
         const prompt = `You are a helpful library assistant.

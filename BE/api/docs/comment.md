@@ -337,9 +337,106 @@ Cookie: accessToken=<token>
 
 ---
 
-## 2. ERROR RESPONSES
+## 2. ADMIN & AI ENDPOINTS
 
-### 2.1. Validation Error (400)
+### 2.1. Lấy Tất Cả Comments (Admin)
+Hỗ trợ lọc theo nhiều tiêu chí.
+
+**Endpoint:** `GET /admin/comments` (Mapped to `GET /` with admin/filter params)
+
+**Query Parameters:**
+- `page`, `limit`: Phân trang.
+- `rating`: Lọc theo rating (1-5).
+- `bookId`: Lọc theo sách.
+- `userId`: Lọc theo user.
+- `status`: Lọc theo trạng thái (`APPROVED`, `PENDING`, `REJECTED`).
+- `sentiment`: Lọc theo cảm xúc (`POSITIVE`, `NEUTRAL`, `NEGATIVE`).
+
+**Response:** Tương tự `GET /books/:bookId/comments` nhưng bao gồm cả comment chưa duyệt/đã xóa nếu có quyền admin.
+
+---
+
+### 2.2. Duyệt/Từ Chối Comment
+**Endpoint:** 
+- `PUT /comments/:commentId/approve`
+- `PUT /comments/:commentId/reject`
+- `PUT /comments/:commentId/status` (Body: `{ "status": "APPROVED" | "REJECTED" | "PENDING" }`)
+
+**Response:**
+```json
+{ "success": true, "message": "Comment status changed to ..." }
+```
+
+---
+
+### 2.3. AI Moderation & Bulk Operations
+
+#### Kiểm tra hàng loạt comment đang chờ (Pending)
+**Endpoint:** `POST /comments/bulk-check`
+**Description:** Chạy AI để kiểm tra spam/sentiment cho tất cả comment đang PENDING.
+**Response:**
+```json
+{
+  "success": true, 
+  "message": "Bulk check completed", 
+  "data": { "processed": 10, "spamDetected": 2 }
+}
+```
+
+#### Phê duyệt hàng loạt
+**Endpoint:** `POST /comments/bulk-approve`
+**Description:** Phê duyệt tất cả comment đang PENDING.
+
+#### Từ chối hàng loạt
+**Endpoint:** `POST /comments/bulk-reject`
+**Description:** Từ chối tất cả comment đang PENDING.
+
+#### Phân tích cảm xúc hàng loạt
+**Endpoint:** `POST /comments/bulk-classify-sentiment`
+**Description:** Chạy phân tích cảm xúc cho các comment chưa có nhãn sentiment.
+
+---
+
+### 2.4. Cấu Hình Moderation Mode
+**Endpoint:** `GET /comments/moderation-mode`
+**Response:** `{ "success": true, "mode": "DEFAULT" }`
+
+**Endpoint:** `PUT /comments/moderation-mode`
+**Body:** `{ "mode": "DEFAULT" | "AI_AUTO" | "AUTO_APPROVE" }`
+**Modes:**
+- `DEFAULT`: Admin duyệt thủ công.
+- `AI_AUTO`: AI tự động duyệt (Spam -> Rejected, Safe -> Approved).
+- `AUTO_APPROVE`: Tự động duyệt tất cả (AI chạy ngầm để lấy sentiment).
+
+---
+
+### 2.5. Thống Kê & Analytics
+
+#### Thống kê cảm xúc theo sách
+**Endpoint:** `GET /comments/stats/sentiment`
+**Query:** `bookId` (optional)
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "POSITIVE": 10,
+    "NEUTRAL": 5,
+    "NEGATIVE": 2,
+    "UNKNOWN": 0
+  }
+}
+```
+
+#### Sách có nhiều bình luận (Analytics)
+**Endpoint:** `GET /comments/books-with-comments`
+**Response:** Danh sách sách sắp xếp theo số lượng bình luận.
+
+---
+
+## 3. ERROR RESPONSES
+
+### 3.1. Validation Error (400)
 ```json
 {
   "success": false,
@@ -347,7 +444,7 @@ Cookie: accessToken=<token>
 }
 ```
 
-### 2.2. Unauthorized (401)
+### 3.2. Unauthorized (401)
 ```json
 {
   "success": false,
@@ -355,7 +452,7 @@ Cookie: accessToken=<token>
 }
 ```
 
-### 2.3. Forbidden (403)
+### 3.3. Forbidden (403)
 ```json
 {
   "success": false,
@@ -363,7 +460,7 @@ Cookie: accessToken=<token>
 }
 ```
 
-### 2.4. Not Found (404)
+### 3.4. Not Found (404)
 ```json
 {
   "success": false,
@@ -371,7 +468,7 @@ Cookie: accessToken=<token>
 }
 ```
 
-### 2.5. Conflict (409)
+### 3.5. Conflict (409)
 ```json
 {
   "success": false,
@@ -379,7 +476,7 @@ Cookie: accessToken=<token>
 }
 ```
 
-### 2.6. Server Error (500)
+### 3.6. Server Error (500)
 ```json
 {
   "success": false,

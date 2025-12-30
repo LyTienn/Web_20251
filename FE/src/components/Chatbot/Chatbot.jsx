@@ -11,7 +11,7 @@ const Chatbot = () => {
     const [messages, setMessages] = useState([
         {
             id: 1,
-            text: "Hello! I'm your library assistant. Ask me anything about our books!",
+            text: "Xin chào! Tôi là trợ lý thư viện ảo. Hãy hỏi tôi bất cứ điều gì về sách nhé!",
             sender: 'bot'
         }
     ]);
@@ -57,10 +57,10 @@ const Chatbot = () => {
             setMessages(prev => [...prev, botMessage]);
         } catch (error) {
             console.error("Chat Error:", error);
-            toast.error("Failed to get response from the librarian.");
+            toast.error("Không thể kết nối với thủ thư.");
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
-                text: "Sorry, I'm having trouble connecting to the library archives right now.",
+                text: "Xin lỗi, tôi đang gặp vấn đề kết nối đến kho dữ liệu thư viện ngay lúc này.",
                 sender: 'bot',
                 isError: true
             }]);
@@ -96,10 +96,10 @@ const Chatbot = () => {
                                 <BookOpen size={18} />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-sm">Library Assistant</h3>
+                                <h3 className="font-semibold text-sm">Trợ lý Thư viện</h3>
                                 <p className="text-xs text-blue-100 flex items-center gap-1">
                                     <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                                    Online
+                                    Trực tuyến
                                 </p>
                             </div>
                         </div>
@@ -170,7 +170,7 @@ const Chatbot = () => {
                                 type="text"
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
-                                placeholder="Type a message..."
+                                placeholder="Nhập tin nhắn..."
                                 className="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:text-white"
                                 disabled={isLoading}
                                 aria-label="Chat message input"

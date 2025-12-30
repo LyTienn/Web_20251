@@ -326,6 +326,22 @@ export const createBook = async (req, res) => {
       await book.setSubjects(subjectIds);
     }
 
+    // Generate placeholder chapters if requested
+    const chaptersToCreate = parseInt(req.body.chapter_count || 0);
+    if (chaptersToCreate > 0) {
+      const chapterData = [];
+      for (let i = 1; i <= chaptersToCreate; i++) {
+        chapterData.push({
+          book_id: book.id,
+          chapter_number: i,
+          title: `Chương ${i}`,
+          content: "Nội dung đang được cập nhật...",
+        });
+      }
+      // Bulk create for performance
+      await Chapter.bulkCreate(chapterData);
+    }
+
     // Lấy lại sách vừa tạo kèm tác giả và chủ đề
     const bookWithDetails = await Book.findByPk(book.id, {
       include: [

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Plus, Search, Filter, Pencil, Trash2, Loader2, X, ChevronDown } from 'lucide-react';
+import { Plus, Search, Filter, Pencil, Trash2, Loader2, X, ChevronDown, BookOpen } from 'lucide-react';
 import AdminBookService from '../../service/AdminBookService';
 import AdminAuthorService from '../../service/AdminAuthorService';
 import AdminSubjectService from '../../service/AdminSubjectService';
+import AdminChapterService from '../../service/AdminChapterService';
 import Pagination from '../../components/admin/Pagination';
+
 
 // Custom Searchable Subject Select Component
 function SubjectSelect({ subjects, value, onChange }) {
@@ -266,6 +268,14 @@ export default function Books() {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
+
+  // Chapter Modal State
+  const [showChapterModal, setShowChapterModal] = useState(false);
+  const [selectedBookForChapters, setSelectedBookForChapters] = useState(null);
+  const [chapters, setChapters] = useState([]);
+  const [selectedChapter, setSelectedChapter] = useState(null);
+  const [chapterLoading, setChapterLoading] = useState(false);
+  const [chapterForm, setChapterForm] = useState({ title: '', content: '', chapter_number: 0 });
   // ... (rest of the file content)
 
 
@@ -388,6 +398,88 @@ export default function Books() {
     if (!b) return false;
     return true; // Simplified filtering for stability
   }) : [];
+
+  const handleOpenChapterModal = async (book) => {
+    setSelectedBookForChapters(book);
+    setShowChapterModal(true);
+    setSelectedChapter(null);
+    setChapterForm({ title: '', content: '', chapter_number: 0 });
+    await fetchChapters(book.id);
+  };
+
+  const fetchChapters = async (bookId) => {
+    try {
+      setChapterLoading(true);
+      const res = await AdminBookService.getBookChapters(bookId);
+      if (Array.isArray(res)) {
+        setChapters(res);
+      } else if (res && res.data) {
+        setChapters(res.data);
+      } else {
+        setChapters([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch chapters", error);
+      alert("Lỗi tải danh sách chương");
+    } finally {
+      setChapterLoading(false);
+    }
+  };
+
+  const handleSelectChapter = (chapter) => {
+    setSelectedChapter(chapter);
+    setChapterForm({
+      title: chapter.title,
+      content: chapter.content,
+      chapter_number: chapter.chapter_number
+    });
+  };
+
+  const handleAddChapter = () => {
+    const nextNum = chapters.length > 0 ? Math.max(...chapters.map(c => c.chapter_number || 0)) + 1 : 1;
+    setSelectedChapter({ id: null }); // Temp object to indicate "New" mode
+    setChapterForm({
+      title: `Chương ${nextNum}`,
+      content: '',
+      chapter_number: nextNum
+    });
+  };
+
+  const handleSaveChapter = async () => {
+    try {
+      if (selectedChapter && selectedChapter.id) {
+        // Update existing
+        await AdminChapterService.updateChapter(selectedChapter.id, chapterForm);
+        alert("Cập nhật chương thành công!");
+      } else {
+        // Create new
+        await AdminChapterService.createChapter({
+          ...chapterForm,
+          book_id: selectedBookForChapters.id
+        });
+        alert("Thêm chương mới thành công!");
+      }
+      await fetchChapters(selectedBookForChapters.id); // Refresh list
+    } catch (error) {
+      console.error(error);
+      alert("Lỗi lưu chương: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleDeleteChapter = async (id) => {
+    if (!id) return;
+    if (window.confirm("Bạn có chắc chắn muốn xóa chương này?")) {
+      try {
+        await AdminChapterService.deleteChapter(id);
+        alert("Xóa chương thành công!");
+        await fetchChapters(selectedBookForChapters.id);
+        setSelectedChapter(null);
+      } catch (error) {
+        console.error(error);
+        alert("Lỗi xóa chương");
+      }
+    }
+  }
 
   const handleOpenModal = (book = null) => {
     setEditingBook(book);
@@ -578,6 +670,7 @@ export default function Books() {
                 <td className="px-4 py-3 text-slate-600">{b.language || 'Tiếng Việt'}</td>
                 <td className="px-4 py-3 text-slate-600">{b.chapter_count || 0}</td>
                 <td className="px-4 py-3">
+                  <button onClick={() => handleOpenChapterModal(b)} className="p-2 text-purple-600 hover:bg-purple-50 rounded-full transition-colors" title="Quản lý chương"><BookOpen size={18} /></button>
                   <button onClick={() => handleOpenModal(b)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors mr-1" title="Sửa"><Pencil size={18} /></button>
                   <button onClick={() => handleDelete(b.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Xóa"><Trash2 size={18} /></button>
                 </td>
@@ -630,9 +723,11 @@ export default function Books() {
                     <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Số chương</label>
                     <input
                       type="number"
-                      readOnly
+                      readOnly={!!editingBook}
+                      min="0"
                       value={formData.chapter_count || 0}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 focus:ring-2 focus:ring-primary/50 text-sm cursor-not-allowed"
+                      onChange={e => setFormData({ ...formData, chapter_count: e.target.value })}
+                      className={`w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-primary/50 text-sm ${editingBook ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed' : 'bg-white dark:bg-slate-900'}`}
                     />
                   </div>
 
@@ -710,6 +805,115 @@ export default function Books() {
           </div>
         )
       }
-    </div >
+      {/* Chapter Modal */}
+      {showChapterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-card-dark rounded-xl w-full max-w-5xl h-[80vh] shadow-xl border border-slate-200 dark:border-slate-800 flex overflow-hidden">
+            {/* Sidebar: List of Chapters */}
+            <div className="w-1/3 border-r border-slate-200 dark:border-slate-700 flex flex-col bg-slate-50 dark:bg-slate-900/50">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                <h3 className="font-bold text-lg dark:text-white truncate flex-1">Chương: {selectedBookForChapters?.title}</h3>
+                <button
+                  onClick={handleAddChapter}
+                  className="p-1.5 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                  title="Thêm chương mới"
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-2">
+                {chapterLoading ? (
+                  <div className="text-center py-4 text-slate-500">Đang tải...</div>
+                ) : chapters.length === 0 ? (
+                  <div className="text-center py-4 text-slate-500">Chưa có chương nào.</div>
+                ) : (
+                  chapters.map(ch => (
+                    <div
+                      key={ch.id}
+                      onClick={() => handleSelectChapter(ch)}
+                      className={`p-3 rounded-lg cursor-pointer mb-2 transition-colors ${selectedChapter?.id === ch.id ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 border' : 'hover:bg-slate-200 dark:hover:bg-slate-800 border border-transparent'}`}
+                    >
+                      <div className="font-medium text-sm text-slate-800 dark:text-slate-200">{ch.title}</div>
+                      <div className="text-xs text-slate-500 truncate">{ch.content ? ch.content.substring(0, 50) + "..." : "No content"}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Main Content: Editor */}
+            <div className="flex-1 flex flex-col relative">
+              <button onClick={() => setShowChapterModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <X size={24} />
+              </button>
+
+              <div className="p-6 h-full flex flex-col">
+                {selectedChapter ? (
+                  <>
+                    <h3 className="text-xl font-bold mb-4 dark:text-white">
+                      {selectedChapter.id ? `Chỉnh sửa chương ${selectedChapter.chapter_number}` : 'Thêm chương mới'}
+                    </h3>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tiêu đề chương</label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                          value={chapterForm.title}
+                          onChange={e => setChapterForm({ ...chapterForm, title: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Số thứ tự</label>
+                        <input
+                          type="number"
+                          className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                          value={chapterForm.chapter_number}
+                          onChange={e => setChapterForm({ ...chapterForm, chapter_number: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex-1 mb-4 flex flex-col">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nội dung</label>
+                      <textarea
+                        className="flex-1 w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono text-sm resize-none"
+                        value={chapterForm.content}
+                        onChange={e => setChapterForm({ ...chapterForm, content: e.target.value })}
+                      ></textarea>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-700">
+                      {selectedChapter.id ? (
+                        <button
+                          onClick={() => handleDeleteChapter(selectedChapter.id)}
+                          className="px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors font-medium flex items-center gap-2"
+                        >
+                          <Trash2 size={18} /> Xóa chương
+                        </button>
+                      ) : (
+                        <div></div>
+                      )}
+                      <button
+                        onClick={handleSaveChapter}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/20 font-medium"
+                      >
+                        Lưu thay đổi
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                    <BookOpen size={48} className="mb-4 opacity-50" />
+                    <p>Chọn một chương bên trái để chỉnh sửa</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

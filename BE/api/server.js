@@ -20,6 +20,7 @@ import chatbotRoutes from "./routes/chatbot-route.js";
 import translationRoutes from "./routes/translation-route.js";
 import comicRoutes from "./routes/comic-route.js";
 import subscriptionRoutes from "./routes/subscription-route.js";
+import chapterRoutes from "./routes/chapter-route.js";
 import { initializeVectorStore } from "./services/rag-service.js";
 
 
@@ -66,6 +67,7 @@ app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/translate", translationRoutes);
 app.use("/api/comic", comicRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/chapters", chapterRoutes);
 
 // Public stats route (no auth required)
 import StatsController from "./controllers/stats-controller.js";
