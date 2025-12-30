@@ -82,7 +82,49 @@ sudo docker compose up -d --build
 - Truy cập web:
   Mở trình duyệt và truy cập IP của server (ví dụ: `http://<YOUR_SERVER_IP>`).
 
-## 6. Dừng dự án
+
+
+## 6. Khôi phục dữ liệu (Restore Database)
+
+Nếu bạn có file backup database (file `.sql`), bạn có thể khôi phục dữ liệu mẫu.
+**Link tải dữ liệu**: [Google Drive Link](https://drive.google.com/file/d/1msWUk-Q4kyaug3sD0OpXtdHehCc5jug4/view?usp=drive_link)
+
+**Lưu ý**: Vì file có kích thước lớn, bạn nên dùng công cụ `gdown` để tải trực tiếp trên server:
+
+1. Cài đặt gdown (cần Python):
+   ```bash
+   sudo apt install python3-pip
+   pip3 install gdown
+   ```
+   *(Nếu server báo lỗi break system packages, dùng `pip3 install gdown --break-system-packages` hoặc dùng `venv`)*
+
+
+
+2. Tải file:
+   ```bash
+   gdown 1msWUk-Q4kyaug3sD0OpXtdHehCc5jug4 -O data_5500.backup
+   ```
+
+3. Copy file vào container và khôi phục (định dạng `.backup` thường cần `pg_restore`):
+
+```bash
+# Copy file vào container
+sudo docker cp data_5500.backup web20251_db:/tmp/data_5500.backup
+
+# Chạy lệnh restore
+sudo docker exec web20251_db pg_restore -U postgres -d CNWEB -v /tmp/data_5500.backup
+```
+
+*Lưu ý: Nếu lệnh trên báo lỗi về định dạng, có thể file là dạng text SQL. Hãy thử dùng:*
+```bash
+cat data_5500.backup | sudo docker exec -i web20251_db psql -U postgres -d CNWEB
+```
+
+Lưu ý:
+- `web20251_db` là tên container database (được định nghĩa trong docker-compose.yml).
+- `CNWEB` là tên database.
+
+## 7. Dừng dự án
 
 ```bash
 sudo docker compose down

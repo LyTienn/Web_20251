@@ -47,7 +47,43 @@ Docker sẽ tự động:
    - **Backend API**: [http://localhost:5000](http://localhost:5000)
    - **Database**: Kết nối qua cổng `5432` với user/pass trong file `.env`.
 
-## 6. Các lệnh thường dùng
+
+
+## 6. Khôi phục dữ liệu (Restore Database)
+
+Nếu bạn có file backup database (file `.sql`), bạn có thể khôi phục dữ liệu mẫu.
+**Link tải dữ liệu**: [Google Drive Link](https://drive.google.com/file/d/1msWUk-Q4kyaug3sD0OpXtdHehCc5jug4/view?usp=drive_link)
+
+**Cách tải file lớn bằng dòng lệnh (nếu trình duyệt bị chậm/ngắt):**
+1. Cài đặt Python (nếu chưa có).
+2. Mở Terminal và cài `gdown`:
+   ```powershell
+   pip install gdown
+   ```
+
+
+3. Tải file:
+   ```powershell
+   gdown 1msWUk-Q4kyaug3sD0OpXtdHehCc5jug4 -O data_5500.backup
+   ```
+
+4. Sau khi tải xong, copy file vào container và restore:
+
+```powershell
+# Copy file vào container
+docker cp data_5500.backup web20251_db:/tmp/data_5500.backup
+
+# Chạy lệnh restore
+docker exec web20251_db pg_restore -U postgres -d CNWEB -v /tmp/data_5500.backup
+```
+
+*Nếu lệnh trên báo lỗi định dạng (input file appears to be a text format dump), hãy dùng lệnh sau để restore:*
+```powershell
+Get-Content data_5500.backup | docker exec -i web20251_db psql -U postgres -d CNWEB
+```
+*(Nếu dùng Command Prompt (cmd), dùng lệnh: `type data_5500.backup | docker exec -i web20251_db psql -U postgres -d CNWEB`)*
+
+## 7. Các lệnh thường dùng
 
 - **Xem logs**:
   ```powershell
@@ -61,3 +97,30 @@ Docker sẽ tự động:
   ```powershell
   docker-compose restart
   ```
+
+## 8. Xử lý lỗi thường gặp (Troubleshooting)
+
+### Lỗi kết nối mạng (context deadline exceeded / Client.Timeout)
+Nếu bạn gặp lỗi không thể pull image từ Docker Hub (timeout) mặc dù máy có mạng:
+1. Mở **Docker Desktop**.
+2. Vào **Settings** (biểu tượng bánh răng) -> **Docker Engine**.
+3. Sửa lại file JSON như sau (copy toàn bộ):
+   ```json
+   {
+     "builder": {
+       "gc": {
+         "defaultKeepStorage": "20GB",
+         "enabled": true
+       }
+     },
+     "experimental": false,
+     "dns": [
+       "8.8.8.8"
+     ]
+   }
+   ```
+4. Click **Apply & restart**.
+5. Thử chạy lại lệnh `docker-compose up -d --build`.
+
+**Cách khác:**
+- Nếu đổi DNS ko được, hãy thử bật **VPN** (hoặc `1.1.1.1` WARP) rồi pull lại. Docker Hub đôi khi bị chặn/chậm tại VN.
