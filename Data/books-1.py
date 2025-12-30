@@ -1,6 +1,31 @@
+# --- Helper to get all book IDs from the database ---
+def get_all_book_ids(conn):
+    with conn.cursor() as cur:
+        cur.execute('SELECT id FROM books')
+        return [row[0] for row in cur.fetchall()]
+
+# --- Helper to extract image URL from Gutendex formats dict ---
+def extract_image_url(formats):
+    # Gutendex usually provides image/jpeg or image/png
+    for key in formats:
+        if key.startswith('image/'):
+            return formats[key]
+    return None
+
+# --- Helper to extract plain text URL from Gutendex formats dict ---
+def gutendex_to_txt_url(formats):
+    # Prefer text/plain; charset=utf-8, then text/plain
+    for key in formats:
+        if key.startswith('text/plain'):
+            return formats[key]
+    return None
 # Lưu ý: Mật khẩu mặc định cho người dùng mẫu là "Password123!"; cấu hình DB đọc từ biến môi trường (mặc định DB_NAME=CNWEB, DB_PASS=hung2004).
+GEMINI_API_KEY = ""  # <-- Nhập API key Gemini của bạn ở đây. VD: "AIza..."
 import requests
+from google import genai
+import json
 import psycopg2
+
 import re
 import os
 import uuid
@@ -14,7 +39,7 @@ from datetime import datetime, timedelta
 # CẤU HÌNH CHẠY (USER SETTINGS)
 # =============================================================================
 # Số lượng sách muốn lấy (đặt số nhỏ để test, số lớn để chạy thật)
-MAX_BOOKS_TO_FETCH = 1000
+MAX_BOOKS_TO_FETCH = 5500
 
 # Tiếp tục chạy nếu gặp lỗi khi xử lý một cuốn sách (True/False)
 CONTINUE_ON_ERROR = True
@@ -23,7 +48,7 @@ CONTINUE_ON_ERROR = True
 SLEEP_BETWEEN_REQUESTS = 0.5 
 
 DB_CONFIG = {
-    "dbname": os.getenv("DB_NAME", "CNWEB1"),
+    "dbname": os.getenv("DB_NAME", "CNWEB3"),
     "user": os.getenv("DB_USER", "postgres"),
     "password": os.getenv("DB_PASS", "hung2004"),
     "host": os.getenv("DB_HOST", "localhost"),
@@ -33,6 +58,12 @@ DB_CONFIG = {
 
 def connect_db():
     return psycopg2.connect(**DB_CONFIG)
+
+# Helper to count rows in a table
+def table_count(conn, table_name):
+    with conn.cursor() as cur:
+        cur.execute(f'SELECT COUNT(*) FROM {table_name}')
+        return cur.fetchone()[0]
 
 def ensure_timestamp_defaults(cur, table_name):
     # Ensure createdAt and updatedAt columns have DEFAULT CURRENT_TIMESTAMP if they already exist
@@ -81,9 +112,11 @@ def create_tables(conn):
             txt_url TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             type book_type DEFAULT 'FREE',
+            embedding TEXT,
             is_deleted INTEGER DEFAULT 0
         );
         """)
+        cur.execute('ALTER TABLE books ADD COLUMN IF NOT EXISTS embedding TEXT')
         cur.execute('ALTER TABLE books ADD COLUMN IF NOT EXISTS is_deleted INTEGER DEFAULT 0')
 
         cur.execute("""
@@ -167,9 +200,14 @@ def create_tables(conn):
             chapter_number INTEGER,
             title TEXT,
             content TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            audio_links JSON DEFAULT '[]',
+            summary TEXT,
+            comic_data JSON DEFAULT '[]'
         );
         """)
+        cur.execute("ALTER TABLE chapters ADD COLUMN IF NOT EXISTS audio_links JSON DEFAULT '[]'")
+        cur.execute("ALTER TABLE chapters ADD COLUMN IF NOT EXISTS summary TEXT")
+        cur.execute("ALTER TABLE chapters ADD COLUMN IF NOT EXISTS comic_data JSON DEFAULT '[]'")
 
         # Users
         cur.execute("SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role')")
@@ -199,6 +237,11 @@ def create_tables(conn):
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_deleted INTEGER DEFAULT 0")
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)")
         
+        # Comments - sentiment enum
+        cur.execute("SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'comment_sentiment')")
+        if not cur.fetchone()[0]:
+            cur.execute("CREATE TYPE comment_sentiment AS ENUM ('POSITIVE', 'NEUTRAL', 'NEGATIVE')")
+        
         # Comments
         cur.execute("""
         CREATE TABLE IF NOT EXISTS comments (
@@ -209,29 +252,30 @@ def create_tables(conn):
             book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             status VARCHAR(20) DEFAULT 'PENDING',
+            sentiment comment_sentiment,
             is_deleted INTEGER DEFAULT 0
         );
         """)
         cur.execute("ALTER TABLE comments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'PENDING'")
+        cur.execute("ALTER TABLE comments ADD COLUMN IF NOT EXISTS sentiment comment_sentiment")
         cur.execute("ALTER TABLE comments ADD COLUMN IF NOT EXISTS is_deleted INTEGER DEFAULT 0")
 
-        # User Bookshelf
-        cur.execute("SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'bookshelf_status')")
-        if not cur.fetchone()[0]:
-            cur.execute("CREATE TYPE bookshelf_status AS ENUM ('FAVORITE', 'READING')")
-
+        # User Bookshelf - updated schema with is_favorite/is_reading instead of status enum
         cur.execute("""
         CREATE TABLE IF NOT EXISTS user_bookshelf (
             user_id UUID REFERENCES users(user_id) ON DELETE CASCADE,
             book_id INTEGER REFERENCES books(id) ON DELETE CASCADE,
-            status bookshelf_status NOT NULL,
+            is_favorite BOOLEAN DEFAULT FALSE,
+            is_reading BOOLEAN DEFAULT FALSE,
             added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_read_chapter_id INTEGER,
             last_read_at TIMESTAMP,
             last_read_scroll_position FLOAT DEFAULT 0,
-            PRIMARY KEY (user_id, book_id, status)
+            PRIMARY KEY (user_id, book_id)
         );
         """)
+        cur.execute("ALTER TABLE user_bookshelf ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN DEFAULT FALSE")
+        cur.execute("ALTER TABLE user_bookshelf ADD COLUMN IF NOT EXISTS is_reading BOOLEAN DEFAULT FALSE")
         cur.execute("ALTER TABLE user_bookshelf ADD COLUMN IF NOT EXISTS last_read_chapter_id INTEGER")
         cur.execute("ALTER TABLE user_bookshelf ADD COLUMN IF NOT EXISTS last_read_at TIMESTAMP")
         cur.execute("ALTER TABLE user_bookshelf ADD COLUMN IF NOT EXISTS last_read_scroll_position FLOAT DEFAULT 0")
@@ -251,6 +295,62 @@ def create_tables(conn):
             expiry_date TIMESTAMP NOT NULL,
             payment_transaction_id VARCHAR(255),
             status subscription_status DEFAULT 'PENDING'
+        );
+        """)
+
+        # Tasks table - for TTS, SUMMARY, TRANSLATION, COMIC
+        cur.execute("SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_type')")
+        if not cur.fetchone()[0]:
+            cur.execute("CREATE TYPE task_type AS ENUM ('TTS', 'SUMMARY', 'TRANSLATION', 'COMIC')")
+        
+        cur.execute("SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_status')")
+        if not cur.fetchone()[0]:
+            cur.execute("CREATE TYPE task_status AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED')")
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id UUID PRIMARY KEY,
+            type task_type NOT NULL,
+            status task_status DEFAULT 'PENDING' NOT NULL,
+            result JSON,
+            error TEXT,
+            progress JSON,
+            chapter_id INTEGER,
+            book_id INTEGER,
+            book_title TEXT,
+            chapter_title TEXT,
+            voice_name VARCHAR(50),
+            user_id INTEGER,
+            "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+        cur.execute('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS result JSON')
+        cur.execute('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS error TEXT')
+        cur.execute('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS progress JSON')
+        cur.execute('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS book_title TEXT')
+        cur.execute('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS chapter_title TEXT')
+        cur.execute('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS voice_name VARCHAR(50)')
+        cur.execute('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS user_id INTEGER')
+
+        # Translations table
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS translations (
+            translation_id SERIAL PRIMARY KEY,
+            chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+            language VARCHAR(50) NOT NULL,
+            translated_text TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_translations_chapter_language ON translations (chapter_id, language)")
+
+        # System settings table
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS system_settings (
+            id SERIAL PRIMARY KEY,
+            key VARCHAR(255) UNIQUE NOT NULL,
+            value TEXT
         );
         """)
         
@@ -289,63 +389,113 @@ def insert_author(conn, name, birth_year, death_year):
         conn.commit()
         return cur.fetchone()[0]
 
-def insert_book(conn, gutenberg_id, title, author_id, language, download_count, txt_url, summary, image_url):
+def insert_book(conn, gutenberg_id, title, author_id, language, download_count, txt_url, summary, image_url, book_type='FREE'):
+    # Insert book first (without embedding)
     with conn.cursor() as cur:
-        cur.execute("""
-            INSERT INTO books (gutenberg_id, title, author_id, language, download_count, txt_url, summary, image_url)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        cur.execute(""" 
+            INSERT INTO books (gutenberg_id, title, author_id, language, download_count, txt_url, summary, image_url, type, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
             ON CONFLICT (gutenberg_id) DO NOTHING
             RETURNING id;
-        """, (gutenberg_id, title, author_id, language, download_count, txt_url, summary, image_url))
+        """, (gutenberg_id, title, author_id, language, download_count, txt_url, summary, image_url, book_type))
         result = cur.fetchone()
         if result:
             book_id = result[0]
         else:
             cur.execute("SELECT id FROM books WHERE gutenberg_id = %s", (gutenberg_id,))
-            book_id = cur.fetchone()[0]
+            row = cur.fetchone()
+            book_id = row[0] if row else None
         conn.commit()
-        return book_id
+    if not book_id:
+        return None
+
+    # Sinh embedding cho book title (và summary nếu có)
+    embedding = None
+    embed_text = title
+    if summary:
+        embed_text += ". " + summary
+    if GEMINI_API_KEY and embed_text:
+        try:
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            for attempt in range(3):
+                try:
+                    result = client.models.embed_content(
+                        model="text-embedding-004",
+                        contents=embed_text
+                    )
+                    embedding = result.embeddings[0].values if result and result.embeddings else None
+                    if embedding:
+                        break
+                except Exception as e:
+                    print(f"[WARN] Lần thử embedding {attempt+1} cho book {title} thất bại: {e}")
+                    time.sleep(1)
+            if embedding is None:
+                print(f"[WARN] Không lấy được embedding cho book {title} sau 3 lần thử!")
+        except Exception as e:
+            print(f"[ERROR] Lỗi import hoặc khởi tạo Gemini SDK: {e}")
+
+    # Lưu embedding vào DB nếu có
+    if embedding is not None:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE books SET embedding = %s WHERE id = %s", (json.dumps(embedding), book_id))
+            conn.commit()
+        print(f"    ✨ Đã tạo và lưu embedding cho: {title}")
+    else:
+        print(f"    ⚠️ Không có embedding nào được lưu cho: {title}")
+    return book_id
+
 
 def insert_relation(conn, table, book_id, values):
     if not values:
         return
+    
+    # Determine junction table and FK column
+    junction_table = f"book_{table}"
+    fk_column = "subject_id" if table == "subjects" else "bookshelf_id"
+    
     with conn.cursor() as cur:
         for name in values:
             if not name.strip():
                 continue
-            # Upsert the reference (subject/bookshelf)
+            
+            # 1. Upsert Entity
             cur.execute(
                 f"INSERT INTO {table} (name) VALUES (%s) ON CONFLICT (name) DO NOTHING RETURNING id;",
                 (name,),
             )
             result = cur.fetchone()
+            
+            entity_id = None
             if result:
-                ref_id = result[0]
+                entity_id = result[0]
             else:
                 cur.execute(f"SELECT id FROM {table} WHERE name = %s", (name,))
-                ref_row = cur.fetchone()
-                if not ref_row:
-                    # Fallback: create explicitly if RETURNING id was not provided
-                    cur.execute(f"INSERT INTO {table} (name) VALUES (%s) RETURNING id;", (name,))
-                    ref_id = cur.fetchone()[0]
-                else:
-                    ref_id = ref_row[0]
-
-            rel_table = "book_subjects" if table == "subjects" else "book_bookshelves"
-            ref_field = "subject_id" if table == "subjects" else "bookshelf_id"
-            # Prevent duplicates using unique index, and ensure timestamps for Sequelize-managed tables
-            cur.execute(
-                f"INSERT INTO {rel_table} (book_id, {ref_field}, \"createdAt\", \"updatedAt\") VALUES (%s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING;",
-                (book_id, ref_id),
-            )
+                row = cur.fetchone()
+                if row:
+                    entity_id = row[0]
+            
+            # 2. Insert Junction
+            if entity_id:
+                cur.execute(
+                    f"""
+                    INSERT INTO {junction_table} (book_id, {fk_column}) 
+                    VALUES (%s, %s)
+                    ON CONFLICT DO NOTHING;
+                    """,
+                    (book_id, entity_id)
+                )
         conn.commit()
 
 def insert_chapter(conn, book_id, chapter_number, title, content):
     with conn.cursor() as cur:
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO chapters (book_id, chapter_number, title, content)
             VALUES (%s, %s, %s, %s)
-        """, (book_id, chapter_number, title, content))
+            ON CONFLICT DO NOTHING;
+            """,
+            (book_id, chapter_number, title, content)
+        )
         conn.commit()
 
 
@@ -374,9 +524,9 @@ def split_chapters(text, min_content_length=150):
         end_index = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         chapter_title = match.group(0).strip()
         content = text[start_index:end_index].strip()
-        content = re.sub(r'\n\s*\n', '\n\n', content).strip()
+        content = re.sub(r'\\n\\s*\\n', '\\n\\n', content).strip()
 
-        first_lines = "\n".join(content.split('\n', 2)[:2]).lower()
+        first_lines = "\\n".join(content.split('\\n', 2)[:2]).lower()
         for kw in epilogue_keywords:
             if kw in first_lines:
                 chapter_title = kw.capitalize()
@@ -385,7 +535,7 @@ def split_chapters(text, min_content_length=150):
         if content and len(content) >= min_content_length:
             chapters.append({'title': chapter_title, 'content': content})
         elif chapters:
-            chapters[-1]['content'] += "\n\n--- " + chapter_title + " ---\n\n" + content
+            chapters[-1]['content'] += "\\n\\n--- " + chapter_title + " ---\\n\\n" + content
 
     return [(i + 1, ch['title'], ch['content']) for i, ch in enumerate(chapters)]
 
@@ -395,11 +545,6 @@ def fetch_books_paginated(max_books=1000, page_limit=100, sleep_seconds=0.5):
     page_limit = max(1, min(page_limit, 100))
     url = f"https://gutendex.com/books/?languages=en&limit={page_limit}"
     results = []
-    
-def fetch_books_paginated(max_books=1000, page_limit=100, sleep_seconds=0.5):
-    # Gutendex allows up to 100 per request; use 'next' for pagination
-    page_limit = max(1, min(page_limit, 100))
-    url = f"https://gutendex.com/books/?languages=en&limit={page_limit}"
     count = 0
     
     while url and count < max_books:
@@ -429,40 +574,15 @@ def fetch_books_paginated(max_books=1000, page_limit=100, sleep_seconds=0.5):
         
         if not success:
             print("❌ Không thể tải thêm sau nhiều lần thử. Dừng tại đây.")
-            break
+            return results
         
-        for book in batch:
-            yield book
-            count += 1
-            if count >= max_books:
-                break
+        # Add batch to results and update count
+        results.extend(batch)
+        count += len(batch)
+    
+    return results
 
-def gutendex_to_txt_url(formats):
-    for fmt, link in formats.items():
-        if 'text/plain' in fmt.lower():
-            if '/files/' in link:
-                return link
-            m = re.search(r'/ebooks/(\d+)', link)
-            if m:
-                book_id = m.group(1)
-                return f"https://www.gutenberg.org/files/{book_id}/{book_id}-0.txt"
-    return None
-
-def extract_image_url(formats):
-    return formats.get("image/jpeg", None)
-
-
-def get_all_book_ids(conn):
-    with conn.cursor() as cur:
-        cur.execute("SELECT id FROM books")
-        return [row[0] for row in cur.fetchall()]
-
-def table_count(conn, table):
-    with conn.cursor() as cur:
-        cur.execute(f"SELECT COUNT(*) FROM {table}")
-        return cur.fetchone()[0]
-
-def insert_user(conn, email, plain_password, full_name, role="USER"):
+def insert_user(conn, email, plain_password, full_name, role):
     user_id = str(uuid.uuid4())
     password_hash = bcrypt.hashpw(plain_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     with conn.cursor() as cur:
@@ -499,15 +619,15 @@ def insert_comment(conn, user_id, book_id, content, rating):
         )
         conn.commit()
 
-def insert_user_bookshelf(conn, user_id, book_id, status):
+def insert_user_bookshelf(conn, user_id, book_id, is_favorite=False, is_reading=False):
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO user_bookshelf (user_id, book_id, status, added_at)
-            VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
-            ON CONFLICT DO NOTHING;
+            INSERT INTO user_bookshelf (user_id, book_id, is_favorite, is_reading, added_at)
+            VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (user_id, book_id) DO UPDATE SET is_favorite = EXCLUDED.is_favorite, is_reading = EXCLUDED.is_reading;
             """,
-            (user_id, book_id, status),
+            (user_id, book_id, is_favorite, is_reading),
         )
         conn.commit()
 
@@ -561,14 +681,25 @@ def seed_engagement(conn):
 
     # Seed user_bookshelf if empty
     if table_count(conn, "user_bookshelf") == 0:
-        statuses = ["FAVORITE", "READING"]
         for uid in created_users:
             picks = random.sample(book_ids, k=min(8, len(book_ids)))
             for bid in picks[:4]:
-                insert_user_bookshelf(conn, uid, bid, statuses[0])
+                insert_user_bookshelf(conn, uid, bid, is_favorite=True, is_reading=False)
             for bid in picks[4:8]:
-                insert_user_bookshelf(conn, uid, bid, statuses[1])
+                insert_user_bookshelf(conn, uid, bid, is_favorite=False, is_reading=True)
         print("✅ Tạo user_bookshelf mẫu")
+
+    # Không seed dữ liệu cho bảng tasks
+
+    # Không seed dữ liệu cho bảng translations
+
+    # Không seed dữ liệu cho bảng system_settings
+    # if table_count(conn, "system_settings") == 0:
+    #     with conn.cursor() as cur:
+    #         cur.execute("INSERT INTO system_settings (key, value) VALUES (%s, %s) ON CONFLICT DO NOTHING;", ("site_name", "CNWEB Library"))
+    #         cur.execute("INSERT INTO system_settings (key, value) VALUES (%s, %s) ON CONFLICT DO NOTHING;", ("maintenance_mode", "off"))
+    #         conn.commit()
+    #     print("✅ Tạo system_settings mẫu")
 
 def insert_subscription(conn, user_id, package_details, duration_days, status, transaction_id=None):
     sub_id = str(uuid.uuid4())
@@ -587,33 +718,47 @@ def insert_subscription(conn, user_id, package_details, duration_days, status, t
         conn.commit()
 
 def seed_subscriptions(conn):
-    if table_count(conn, "subscriptions") > 0:
-         print("ℹ️ Subscriptions đã có dữ liệu (skip).")
-         return
+    # Không seed dữ liệu cho bảng subscriptions
+    pass
 
-    with conn.cursor() as cur:
-        # Find 'reader' or database users
-        cur.execute("SELECT user_id, email FROM users")
-        users = cur.fetchall() # list of (id, email)
+
+import sys
+
+def check_database_exists():
+    """
+    Connect to the default 'postgres' database to check if the target database exists.
+    If not, exit with error.
+    """
+    target_db = DB_CONFIG["dbname"]
+    print(f"Checking database '{target_db}'...")
     
-    if not users:
-        print("⚠️ Không có user để tạo subscription.")
-        return
-
-    count = 0
-    for uid, email in users:
-        # Give 'reader' and 'admin' a PREMIUM subscription
-        if "reader" in email or "admin" in email:
-            insert_subscription(conn, uid, "Premium Plan (1 Year)", 365, "ACTIVE", "txn_sample_123")
-            count += 1
-        elif "user1" in email:
-             insert_subscription(conn, uid, "Basic Plan (Monthly)", 30, "EXPIRED", "txn_sample_old")
-             count += 1
-    
-    print(f"✅ Tạo subscription mẫu: {count}")
-
+    # 1. Connect to default 'postgres' db
+    try:
+        # Create a copy of config for postgres connection
+        pg_config = DB_CONFIG.copy()
+        pg_config["dbname"] = "postgres"
+        
+        conn = psycopg2.connect(**pg_config)
+        
+        with conn.cursor() as cur:
+            # 2. Check existence
+            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (target_db,))
+            exists = cur.fetchone()
+            
+            if not exists:
+                print(f"❌ Error: Database '{target_db}' does not exist.")
+                print("➡️  Please create it manually using: CREATE DATABASE CNWEB2;")
+                sys.exit(1)
+            else:
+                print(f"✅ Database '{target_db}' exists. Proceeding...")
+                
+        conn.close()
+    except Exception as e:
+        print(f"❌ Error checking database existence: {e}")
+        sys.exit(1)
 
 def main():
+    check_database_exists()
     conn = connect_db()
     create_tables(conn)
     
@@ -660,7 +805,11 @@ def main():
                 continue
 
             author_id = insert_author(conn, author_name, birth_year, death_year)
-            book_id = insert_book(conn, gutenberg_id, title, author_id, language, download_count, txt_url, summary, image_url)
+            
+            # Randomize book type
+            book_type = random.choice(['FREE', 'PREMIUM'])
+            
+            book_id = insert_book(conn, gutenberg_id, title, author_id, language, download_count, txt_url, summary, image_url, book_type)
             insert_relation(conn, "subjects", book_id, subjects)
             insert_relation(conn, "bookshelves", book_id, shelves)
 
