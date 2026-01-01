@@ -1,6 +1,6 @@
 # USER API DOCUMENTATION
 
-Base URL: `http://localhost:5000/api`
+Base URL: `http://backend:5000/api`
 
 ---
 
@@ -552,7 +552,7 @@ hoặc
 ### 4.1. Get Profile
 
 ```bash
-curl -X GET http://localhost:5000/api/users/profile \
+curl -X GET http://backend:5000/api/users/profile \
   -H "Cookie: accessToken=YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json"
 ```
@@ -560,7 +560,7 @@ curl -X GET http://localhost:5000/api/users/profile \
 ### 4.2. Update Profile
 
 ```bash
-curl -X PUT http://localhost:5000/api/users/profile \
+curl -X PUT http://backend:5000/api/users/profile \
   -H "Cookie: accessToken=YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -572,7 +572,7 @@ curl -X PUT http://localhost:5000/api/users/profile \
 ### 4.3. Change Password
 
 ```bash
-curl -X POST http://localhost:5000/api/users/change-password \
+curl -X POST http://backend:5000/api/users/change-password \
   -H "Cookie: accessToken=YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -584,7 +584,7 @@ curl -X POST http://localhost:5000/api/users/change-password \
 ### 4.4. Delete Account
 
 ```bash
-curl -X DELETE http://localhost:5000/api/users/account \
+curl -X DELETE http://backend:5000/api/users/account \
   -H "Cookie: accessToken=YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -595,7 +595,7 @@ curl -X DELETE http://localhost:5000/api/users/account \
 ### 4.5. Admin - Get All Users
 
 ```bash
-curl -X GET "http://localhost:5000/api/users?page=1&limit=10" \
+curl -X GET "http://backend:5000/api/users?page=1&limit=10" \
   -H "Cookie: accessToken=ADMIN_ACCESS_TOKEN" \
   -H "Content-Type: application/json"
 ```
@@ -603,7 +603,7 @@ curl -X GET "http://localhost:5000/api/users?page=1&limit=10" \
 ### 4.6. Admin - Search Users
 
 ```bash
-curl -X GET "http://localhost:5000/api/users/search?q=john" \
+curl -X GET "http://backend:5000/api/users/search?q=john" \
   -H "Cookie: accessToken=ADMIN_ACCESS_TOKEN" \
   -H "Content-Type: application/json"
 ```
@@ -611,7 +611,7 @@ curl -X GET "http://localhost:5000/api/users/search?q=john" \
 ### 4.7. Admin - Get User By ID
 
 ```bash
-curl -X GET http://localhost:5000/api/users/550e8400-e29b-41d4-a716-446655440000 \
+curl -X GET http://backend:5000/api/users/550e8400-e29b-41d4-a716-446655440000 \
   -H "Cookie: accessToken=ADMIN_ACCESS_TOKEN" \
   -H "Content-Type: application/json"
 ```
@@ -619,7 +619,7 @@ curl -X GET http://localhost:5000/api/users/550e8400-e29b-41d4-a716-446655440000
 ### 4.8. Admin - Delete User
 
 ```bash
-curl -X DELETE http://localhost:5000/api/users/550e8400-e29b-41d4-a716-446655440000 \
+curl -X DELETE http://backend:5000/api/users/550e8400-e29b-41d4-a716-446655440000 \
   -H "Cookie: accessToken=ADMIN_ACCESS_TOKEN" \
   -H "Content-Type: application/json"
 ```

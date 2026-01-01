@@ -1,6 +1,6 @@
 # Text-to-Speech (TTS) API Documentation
 
-Base URL: `http://localhost:5000/api/tts`
+Base URL: `http://backend:5000/api/tts`
 
 ---
 

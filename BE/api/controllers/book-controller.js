@@ -212,11 +212,9 @@ export const getBookChapters = async (req, res) => {
       }
 
       if (user.tier !== "PREMIUM" && user.role !== "ADMIN") {
-        const processedChapters = chapters.map((ch, index) => {
+        const processedChapters = chapters.map((ch) => {
           const chapterData = ch.toJSON();
-          if (index < 3) {
-            return { ...chapterData, isLocked: false };
-          }
+          // Remove preview logic: Require Premium for ALL chapters in a Premium book
           return {
             ...chapterData,
             content: "Nội dung dành riêng cho hội viên Premium.",

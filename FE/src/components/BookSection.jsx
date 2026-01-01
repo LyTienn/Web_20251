@@ -143,7 +143,7 @@ export default function BookSection({ book: bookProp }) {
       <HeaderBar />
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full hover:bg-slate-100">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/homepage/")} className="rounded-full hover:bg-slate-100">
             <ArrowLeft className="w-5 h-5 text-slate-600" />
           </Button>
           <nav className="flex items-center gap-2 text-sm text-muted-foreground">

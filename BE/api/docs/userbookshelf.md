@@ -1,6 +1,6 @@
 # BOOKSHELF API DOCUMENTATION
 
-Base URL: `http://localhost:5000/api/bookshelf`
+Base URL: `http://backend:5000/api/bookshelf`
 
 ---
 

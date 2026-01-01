@@ -1,6 +1,6 @@
 # AI Summary API Documentation
 
-Base URL: `http://localhost:5000/api/summary`
+Base URL: `http://backend:5000/api/summary`
 
 ---
 

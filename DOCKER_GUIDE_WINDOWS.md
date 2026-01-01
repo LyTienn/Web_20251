@@ -44,7 +44,7 @@ Docker sẽ tự động:
 2. Click vào để xem 3 container: `db`, `backend`, `frontend` đang chạy (màu xanh).
 3. Truy cập ứng dụng:
    - **Frontend**: Mở trình duyệt vào [http://localhost](http://localhost)
-   - **Backend API**: [http://localhost:5000](http://localhost:5000)
+   - **Backend API**: [http://backend:5000](http://backend:5000)
    - **Database**: Kết nối qua cổng `5432` với user/pass trong file `.env`.
 
 

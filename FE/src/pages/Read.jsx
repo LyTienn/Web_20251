@@ -828,7 +828,7 @@ export default function ReadBookPage() {
               Nội dung dành cho Hội viên
             </DialogTitle>
             <DialogDescription className="text-center pt-2">
-              Bạn đã đọc hết 3 chương đọc thử miễn phí của cuốn sách này. <br />
+              Sách này không miễn phí. <br />
               Hãy nâng cấp lên gói <strong>Premium</strong> để mở khóa toàn bộ nội dung và tận hưởng kho sách không giới hạn!
             </DialogDescription>
           </DialogHeader>

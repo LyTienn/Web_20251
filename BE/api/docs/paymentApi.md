@@ -1,6 +1,6 @@
 # PAYMENT API DOCUMENTATION
 
-Base URL: `http://localhost:5000/api`
+Base URL: `http://backend:5000/api`
 
 ---
 
@@ -55,7 +55,7 @@ Cookie: accessToken=<token>
 {
   "success": true,
   "data": {
-    "paymentUrl": "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_Amount=17900000&vnp_Command=pay&vnp_CreateDate=20240115103045&vnp_CurrCode=VND&vnp_IpAddr=127.0.0.1&vnp_Locale=vn&vnp_OrderInfo=Thanh+toan+goi+6_THANG&vnp_OrderType=other&vnp_ReturnUrl=http://localhost:5000/api/payment/vnpay-return&vnp_TmnCode=JC7PF7YK&vnp_TxnRef=1705308645000&vnp_Version=2.1.0&vnp_SecureHash=abc123..."
+    "paymentUrl": "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_Amount=17900000&vnp_Command=pay&vnp_CreateDate=20240115103045&vnp_CurrCode=VND&vnp_IpAddr=127.0.0.1&vnp_Locale=vn&vnp_OrderInfo=Thanh+toan+goi+6_THANG&vnp_OrderType=other&vnp_ReturnUrl=http://backend:5000/api/payment/vnpay-return&vnp_TmnCode=JC7PF7YK&vnp_TxnRef=1705308645000&vnp_Version=2.1.0&vnp_SecureHash=abc123..."
   }
 }
 ```
@@ -97,7 +97,7 @@ hoặc
 **Example Request (Postman):**
 
 ```bash
-POST http://localhost:5000/api/payment/create-payment-url
+POST http://backend:5000/api/payment/create-payment-url
 Content-Type: application/json
 Cookie: accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
@@ -312,7 +312,7 @@ Cần thiết lập trong [`.env`](Web_20251/BE/api/.env):
 VNP_TMN_CODE=JC7PF7YK
 VNP_HASH_SECRET=56RG4CZBOCWVXY738TNGP1BCR9LO2DRL
 VNP_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
-VNP_RETURN_URL=http://localhost:5000/api/payment/vnpay-return
+VNP_RETURN_URL=http://backend:5000/api/payment/vnpay-return
 FRONTEND_URL=http://localhost:5173
 ```
 
@@ -330,7 +330,7 @@ FRONTEND_URL=http://localhost:5173
 #### Bước 1: Login
 
 ```bash
-POST http://localhost:5000/api/auth/login
+POST http://backend:5000/api/auth/login
 Content-Type: application/json
 
 {
@@ -342,7 +342,7 @@ Content-Type: application/json
 #### Bước 2: Tạo Payment URL
 
 ```bash
-POST http://localhost:5000/api/payment/create-payment-url
+POST http://backend:5000/api/payment/create-payment-url
 Content-Type: application/json
 Cookie: accessToken=<from_login>
 

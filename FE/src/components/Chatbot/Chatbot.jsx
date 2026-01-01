@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Minimize2, Loader2, BookOpen } from 'lucide-react';
-import axios from 'axios';
+import axios from "@/config/Axios-config";
 import { toast } from 'react-toastify';
 import { cn } from "@/lib/utils";
 import ReactMarkdown from 'react-markdown';
@@ -42,7 +42,7 @@ const Chatbot = () => {
         setIsLoading(true);
 
         try {
-            const response = await axios.post('http://localhost:5000/api/chatbot/chat', {
+            const response = await axios.post('/chatbot/chat', {
                 message: userMessage.text
             }, {
                 withCredentials: true
@@ -50,7 +50,7 @@ const Chatbot = () => {
 
             const botMessage = {
                 id: Date.now() + 1,
-                text: response.data.data,
+                text: response.data,
                 sender: 'bot'
             };
 

@@ -26,7 +26,7 @@ class GeminiClient {
         let lastError = null;
 
         for (const modelName of this.models) {
-            for (let attempt = 1; attempt <= 3; attempt++) {
+            for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     // console.log(`Attempting generation with model: ${modelName} (Attempt ${attempt}/3)`);
                     const response = await this.client.models.generateContent({

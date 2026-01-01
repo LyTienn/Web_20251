@@ -1,6 +1,6 @@
 # COMMENT API DOCUMENTATION
 
-Base URL: `http://localhost:5000/api/comments`
+Base URL: `http://backend:5000/api/comments`
 
 ---
 
