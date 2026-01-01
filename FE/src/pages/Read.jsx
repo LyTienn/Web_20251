@@ -691,6 +691,16 @@ export default function ReadBookPage() {
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="h-7 px-2 text-xs border border-orange-200 text-orange-800 bg-white hover:bg-orange-50"
+                  onClick={handleGenerateComic}
+                  disabled={isGeneratingComic}
+                >
+                  {isGeneratingComic ? <Loader2 className="h-3 w-3 animate-spin" /> : "Tạo ngay"}
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className={`h-7 px-2 text-xs border border-orange-200 text-orange-800 ${comicData.length > 0
                     ? "bg-orange-100 hover:bg-orange-200"
                     : "bg-white opacity-70 hover:opacity-100 hover:bg-orange-50"
@@ -699,12 +709,11 @@ export default function ReadBookPage() {
                     if (comicData.length > 0) {
                       setShowComicReader(true);
                     } else {
-                      handleGenerateComic();
+                      toast.info("Vui lòng tạo truyện tranh trước khi đọc!");
                     }
                   }}
-                  disabled={isGeneratingComic}
                 >
-                  {isGeneratingComic ? <Loader2 className="h-3 w-3 animate-spin" /> : (comicData.length > 0 ? "Đọc ngay" : "Tạo ngay")}
+                  Đọc ngay
                 </Button>
               </div>
 
